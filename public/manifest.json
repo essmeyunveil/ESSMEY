@@ -1,0 +1,67 @@
+{
+  "short_name": "Essmey",
+  "name": "Essmey Perfume",
+  "description": "Discover premium fragrances and perfumes at Essmey",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "Shop Now",
+      "short_name": "Shop",
+      "url": "/shop",
+      "icons": [{
+        "src": "/images/shop-icon.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }]
+    },
+    {
+      "name": "My Cart",
+      "short_name": "Cart",
+      "url": "/cart",
+      "icons": [{
+        "src": "/images/cart-icon.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshot1.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "description": "Home page with featured products"
+    },
+    {
+      "src": "/images/screenshot2.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "description": "Product details page"
+    }
+  ]
+}

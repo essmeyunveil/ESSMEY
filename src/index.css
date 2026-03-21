@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 25 40% 20%; /* Updated to a rich brown */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 35 30% 95%; /* Updated to a soft warm beige */
+    --secondary-foreground: 25 40% 20%;
+    --muted: 35 20% 95%;
+    --muted-foreground: 30 10% 40%;
+    --accent: 28 50% 40%; /* Updated to a warm amber accent */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 10% 90%;
+    --input: 30 10% 90%;
+    --ring: 28 50% 40%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 20 14% 4%; /* Updated for dark mode */
+    --foreground: 0 0% 98%;
+    --card: 20 14% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 20 14% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 35 40% 80%; /* Updated for dark mode */
+    --primary-foreground: 20 10% 10%;
+    --secondary: 20 10% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 20 10% 15%;
+    --muted-foreground: 20 10% 70%;
+    --accent: 30 40% 50%; /* Updated for dark mode */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 20 10% 20%;
+    --input: 20 10% 20%;
+    --ring: 35 40% 70%;
+  }
+
+  /* Custom brand colors */
+  :root {
+    --gold: 36 60% 55%; /* Enriched gold */
+    --cream: 35 38% 94%; /* Warmer cream */
+    --light-cream: 40 100% 97%; /* Warmer light cream */
+    --dark-black: 25 10% 10%; /* Softened black with warm undertone */
+    --amber: 28 50% 40%; /* New amber color */
+    --sienna: 20 60% 45%; /* New sienna color */
+    --sand: 36 30% 90%; /* New sand color */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-white text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif;
+  }
+}
+
+/* Custom container */
+.container-custom {
+  @apply px-5 md:px-8 mx-auto max-w-7xl w-full;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-black text-white px-6 py-3 text-sm font-medium transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md border border-black bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center rounded-md border border-neutral-300 bg-transparent px-6 py-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .nav-link {
+    @apply text-sm font-medium transition-colors hover:text-neutral-500;
+  }
+
+  .product-card {
+    @apply flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg;
+  }
+
+  /* Custom style for hero 'Our Story' button */
+  .essmey-hero-about-btn {
+    @apply inline-flex items-center justify-center rounded-md border-2 border-white bg-black text-white px-6 py-3 text-sm font-medium transition-colors duration-300 hover:bg-white hover:text-black hover:border-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2;
+  }
+
+  /* Custom style for Handcrafted Perfumery section 'Learn More' button */
+  .essmey-learnmore-btn {
+    @apply inline-flex items-center justify-center rounded-md border-2 border-white bg-black text-white px-6 py-3 text-sm font-medium transition-colors duration-300 hover:bg-white hover:text-black hover:border-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2;
+  }
+}
+
+/* Background colors */
+.bg-cream {
+  @apply bg-[#f8f5ef]; /* Updated to a warmer cream */
+}
+
+.bg-amber {
+  @apply bg-[#c08c53]; /* New amber background */
+}
+
+.bg-sand {
+  @apply bg-[#f3eddf]; /* New sand background */
+}
+
+.text-amber {
+  @apply text-[#c08c53]; /* New amber text color */
+}
+
+.border-amber {
+  @apply border-[#c08c53]; /* New amber border */
+}
+
+/* Updated hover effects */
+.hover-lift {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-md;
+}
+
+.hover-glow {
+  @apply transition-all duration-300 hover:shadow-[0_0_8px_rgba(192,140,83,0.3)];
+}
+
+/* Additional styles */
+@layer utilities {
+  .gradient-overlay {
+    @apply relative;
+  }
+
+  .gradient-overlay::after {
+    @apply content-[''] absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none;
+  }
+}
