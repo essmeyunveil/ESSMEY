@@ -8,6 +8,7 @@ import { ShareIcon } from "@heroicons/react/24/outline";
 import ProductReviews from "../components/ProductReviews";
 import AnimatedScentProfile from "../components/AnimatedScentProfile";
 import ProductSkeleton from "../components/ProductSkeleton";
+import AILovedSuggestions from "../components/AILovedSuggestions";
 
 const FALLBACK_IMAGE = "/images/product-1.jpg";
 
@@ -248,6 +249,9 @@ const ProductDetails = () => {
         
         {/* Render Product Reviews */}
         <ProductReviews productId={product._id} />
+
+        {/* AI Recommendations */}
+        <AILovedSuggestions currentProduct={product} />
 
       </div>
     </div>

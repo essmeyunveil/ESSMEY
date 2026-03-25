@@ -271,11 +271,14 @@ const About = () => {
         <h2 className="text-3xl font-serif font-medium mb-6 text-amber">
           Join Our Journey
         </h2>
-        <p className="mb-8">
+        <p className="mb-4">
           We invite you to be part of the Essmey story. Explore our collection
           of handcrafted perfumes and find the scent that speaks to your
           essence. Follow us on social media to stay updated on new releases,
           behind-the-scenes glimpses, and more.
+        </p>
+        <p className="mb-8 font-medium">
+          Contact us at <a href="mailto:essmeyunveil@gmail.com" className="text-amber hover:underline text-lg">essmeyunveil@gmail.com</a> or call <a href="tel:+916284236466" className="text-amber hover:underline text-lg">+91 6284236466</a>.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link

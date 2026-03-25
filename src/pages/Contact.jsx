@@ -113,22 +113,22 @@ const Contact = () => {
               <MapPinIcon className="h-8 w-8 text-amber-500 mr-4" />
               <div>
                 <h3 className="font-medium">Address</h3>
-                <p className="text-neutral-600 mt-1">123 Fragrance Street</p>
-                <p className="text-neutral-600">Perfume City, PC 12345</p>
+                <p className="text-neutral-600 mt-1">Near PVR, Friend Colony</p>
+                <p className="text-neutral-600">Patiala, Punjab 147002, India</p>
               </div>
             </div>
             <div className="flex items-start">
               <PhoneIcon className="h-8 w-8 text-amber-500 mr-4" />
               <div>
                 <h3 className="font-medium">Phone</h3>
-                <p className="text-neutral-600 mt-1">+1 234 567 8900</p>
+                <p className="text-neutral-600 mt-1">+91 6284236466</p>
               </div>
             </div>
             <div className="flex items-start">
               <EnvelopeIcon className="h-8 w-8 text-amber-500 mr-4" />
               <div>
                 <h3 className="font-medium">Email</h3>
-                <p className="text-neutral-600 mt-1">hello@essmey.com</p>
+                <p className="text-neutral-600 mt-1">essmeyunveil@gmail.com</p>
               </div>
             </div>
             <div className="flex items-start">

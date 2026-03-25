@@ -6,6 +6,8 @@ import { getImageUrl } from "../utils/sanity";
 import { StarIcon } from "@heroicons/react/24/solid";
 import { useProducts } from "../features/products/useProducts";
 import { useTestimonials } from "../features/testimonials/useTestimonials";
+import MagneticButton from "../components/MagneticButton";
+import SignatureScent from "../components/SignatureScent";
 import "../utils/uiverse.css";
 
 const Home = () => {
@@ -59,9 +61,9 @@ const Home = () => {
       {/* Hero Section */}
       <section
         className="relative h-[90vh] flex items-center bg-cover bg-center bg-no-repeat xl:bg-fixed"
-        style={{ backgroundImage: "url('/images/hero_essmey.png')" }}
+        style={{ backgroundImage: "url('/images/essmey_custom_bottle.png')" }}
       >
-        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent z-0"></div>
         <div className="container-custom relative z-10 flex flex-col justify-center h-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -79,13 +81,17 @@ const Home = () => {
               Handcrafted perfumes that tell a unique story. Each fragrance is
               meticulously created to reflect your individual personality.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/shop" className="btn-secondary">
-                Explore Collection
-              </Link>
-              <Link to="/about" className="btn-primary">
-                Our Story
-              </Link>
+            <div className="flex flex-col sm:flex-row gap-6">
+              <MagneticButton>
+                <Link to="/shop" className="btn-secondary w-full h-full">
+                  Explore Collection
+                </Link>
+              </MagneticButton>
+              <MagneticButton>
+                <Link to="/about" className="btn-primary w-full h-full border border-transparent">
+                  Our Story
+                </Link>
+              </MagneticButton>
             </div>
           </motion.div>
         </div>
@@ -243,6 +249,9 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Signature Scent Personalization */}
+      <SignatureScent />
+
       {/* Best Sellers */}
       <section className="py-16 bg-cream">
         <div className="container-custom">
@@ -295,6 +304,13 @@ const Home = () => {
                 }`}
               >
                 <div className="flex flex-col items-center justify-center h-full px-4">
+                  <div className="mb-6 rounded-full overflow-hidden w-20 h-20 border-2 border-amber shadow-lg bg-neutral-100 flex items-center justify-center">
+                    {testimonial.imageUrl ? (
+                      <img src={testimonial.imageUrl} alt={testimonial.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl font-serif text-amber uppercase">{testimonial.name ? testimonial.name.charAt(0) : "U"}</span>
+                    )}
+                  </div>
                   <div className="flex justify-center mb-6">
                     {[...Array(5)].map((_, i) => (
                       <StarIcon

@@ -63,23 +63,11 @@ const ScentFinder = () => {
           notes,
           "images": images[].asset->url
         }`);
-        if (data && data.length > 0) {
-          setAllProducts(data);
-        } else {
-          loadSampleData();
-        }
+        
+        setAllProducts(data || []);
       } catch (error) {
         trackError(error, "ScentFinder.fetchProducts");
-        loadSampleData();
-      }
-    };
-
-    const loadSampleData = async () => {
-      try {
-        const { products } = await import("../utils/sampleData");
-        setAllProducts(products);
-      } catch (err) {
-        console.error("Failed to load sample data", err);
+        setAllProducts([]);
       }
     };
 

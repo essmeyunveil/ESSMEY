@@ -12,20 +12,15 @@ export const useTestimonials = () => {
             name,
             location,
             rating,
-            text
+            text,
+            "imageUrl": image.asset->url
           }`
         );
 
-        if (!data || data.length === 0) {
-          const { testimonials: sampleTestimonials } = await import('../../utils/sampleData');
-          return sampleTestimonials;
-        }
-
-        return data;
+        return data || [];
       } catch (error) {
-        console.error("Testimonial fetch failed, using fallback:", error);
-        const { testimonials: sampleTestimonials } = await import('../../utils/sampleData');
-        return sampleTestimonials;
+        console.error("Testimonial fetch failed:", error);
+        return [];
       }
     },
     staleTime: 1000 * 60 * 60, 

@@ -32,10 +32,7 @@ export const useProducts = () => {
           }`
         );
 
-        if (!data || data.length === 0) {
-          const { products: sampleProducts } = await import('../../utils/sampleData');
-          return sampleProducts;
-        }
+        // Strict Remote Enforcement: No local fallback Data
 
         return data.map(product => ({
           ...product,
@@ -55,9 +52,8 @@ export const useProducts = () => {
         }));
 
       } catch (error) {
-        console.error("Sanity fetch failed, using fallback:", error);
-        const { products: sampleProducts } = await import('../../utils/sampleData');
-        return sampleProducts;
+        console.error("Sanity fetch failed:", error);
+        return [];
       }
     },
     staleTime: 1000 * 60 * 60, // 1 hour caching

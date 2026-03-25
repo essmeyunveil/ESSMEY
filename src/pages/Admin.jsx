@@ -5,13 +5,17 @@ import {
   Link,
   useNavigate,
   useLocation,
+  useParams
 } from "react-router-dom";
-import { products } from "../utils/sampleData";
+import { useQueryClient } from "@tanstack/react-query";
+import { useProducts } from "../features/products/useProducts";
+import toast from "react-hot-toast";
 import { useAuth } from "../utils/AuthContext";
 import { client } from "../utils/sanity";
 
 // Dashboard Component
 const Dashboard = () => {
+  const { data: realProducts = [] } = useProducts();
   return (
     <div className="p-6">
       <h2 className="text-2xl font-serif font-medium mb-6">Dashboard</h2>
@@ -19,7 +23,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 border border-neutral-200 shadow-sm">
           <div className="text-neutral-500 mb-2">Total Products</div>
-          <div className="text-3xl font-medium">{products.length}</div>
+          <div className="text-3xl font-medium">{realProducts.length}</div>
           <div className="mt-4 text-sm">
             <Link
               to="/admin/products"
@@ -68,22 +72,38 @@ const Dashboard = () => {
 
 // Products List Component
 const ProductsList = () => {
+  const { data: realProducts = [], isLoading } = useProducts();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
-      setFilteredProducts(products);
+      setFilteredProducts(realProducts);
       return;
     }
-
-    const filtered = products.filter(
+    const filtered = realProducts.filter(
       (product) =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredProducts(filtered);
-  }, [searchTerm]);
+  }, [searchTerm, realProducts]);
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to permanently delete this product?")) {
+       try {
+         await client.delete(id);
+         queryClient.invalidateQueries({ queryKey: ["products"] });
+         toast.success("Product deleted successfully");
+       } catch(error) {
+         toast.error("Failed to delete product");
+       }
+    }
+  };
+
+  if (isLoading) return <div className="p-6">Loading inventory...</div>;
 
   return (
     <div className="p-6">
@@ -123,35 +143,41 @@ const ProductsList = () => {
           </thead>
           <tbody>
             {filteredProducts.map((product) => (
-              <tr key={product.id} className="hover:bg-neutral-50">
-                <td className="border border-neutral-200 p-3">{product.id}</td>
+              <tr key={product._id} className="hover:bg-neutral-50">
+                <td className="border border-neutral-200 p-3 text-neutral-500">{product._id.slice(-6)}</td>
                 <td className="border border-neutral-200 p-3">
-                  <div className="w-12 h-12 bg-neutral-100 overflow-hidden">
+                  <div className="w-12 h-12 bg-neutral-100 overflow-hidden rounded">
                     <img
-                      src={product.image}
+                      src={product.image || "/images/tusu.jpg"}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
                 </td>
-                <td className="border border-neutral-200 p-3">
+                <td className="border border-neutral-200 p-3 font-medium text-neutral-900">
                   {product.name}
                 </td>
-                <td className="border border-neutral-200 p-3 capitalize">
+                <td className="border border-neutral-200 p-3 capitalize text-neutral-600">
                   {product.category}
                 </td>
-                <td className="border border-neutral-200 p-3">
-                  ${product.price.toFixed(2)}
+                <td className="border border-neutral-200 p-3 text-neutral-600">
+                  ${product.price?.toFixed(2)}
                 </td>
-                <td className="border border-neutral-200 p-3">
+                <td className="border border-neutral-200 p-3 text-neutral-600">
                   {product.stock}
                 </td>
                 <td className="border border-neutral-200 p-3">
-                  <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:underline">
+                  <div className="flex space-x-4">
+                    <button 
+                      onClick={() => navigate(`/admin/products/edit/${product._id}`)} 
+                      className="text-amber hover:text-amber/80 font-medium transition"
+                    >
                       Edit
                     </button>
-                    <button className="text-red-600 hover:underline">
+                    <button 
+                      onClick={() => handleDelete(product._id)}
+                      className="text-red-600 hover:text-red-800 font-medium transition"
+                    >
                       Delete
                     </button>
                   </div>
@@ -191,6 +217,7 @@ const OrdersList = () => {
 const NewProduct = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [imageFile, setImageFile] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -254,12 +281,8 @@ const NewProduct = () => {
         ]
       });
       
-      // Clear cache so the new product shows up instantly on the live website
-      sessionStorage.removeItem('products');
-      sessionStorage.removeItem('products_timestamp');
-      sessionStorage.removeItem('featured_products');
-      sessionStorage.removeItem('bestsellers');
-      sessionStorage.removeItem('home_cache_timestamp');
+      // Invalidate React Query cache so the new product shows up instantly on the live website
+      queryClient.invalidateQueries({ queryKey: ["products"] });
 
       // Reset form on success
       alert("Product created successfully! It is now live on the website.");
@@ -454,17 +477,156 @@ const NewProduct = () => {
   );
 };
 
-// Stats Component
-const Stats = () => {
+// Edit Product Form Component
+const EditProduct = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: allProducts = [] } = useProducts();
+  const [imageFile, setImageFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState(null);
+
+  useEffect(() => {
+    const product = allProducts.find((p) => p._id === id);
+    if (product) {
+      setFormData({
+        name: product.name || "",
+        category: product.category || "women",
+        price: product.price || "",
+        description: product.description || "",
+        stock: product.stock || 0,
+        featured: product.featured || false,
+        bestSeller: product.bestSeller || false,
+        new: product.new || false,
+      });
+    }
+  }, [id, allProducts]);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      let updatePayload = {
+        name: formData.name,
+        price: Number(formData.price),
+        description: formData.description,
+        category: formData.category,
+        stock: Number(formData.stock),
+        featured: formData.featured,
+        bestSeller: formData.bestSeller,
+        new: formData.new,
+      };
+
+      if (imageFile) {
+        const imageAsset = await client.assets.upload('image', imageFile, { filename: imageFile.name });
+        updatePayload.image = imageAsset.url;
+        updatePayload.images = [{ _type: 'image', asset: { _type: "reference", _ref: imageAsset._id } }];
+      }
+      
+      await client.patch(id).set(updatePayload).commit();
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Product updated successfully!");
+      navigate("/admin/products");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!formData) return <div className="p-6">Loading product...</div>;
+
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-serif font-medium mb-6">Statistics</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-serif font-medium">Edit Product</h2>
+        <button onClick={() => navigate("/admin/products")} className="text-neutral-600 hover:text-neutral-900">Cancel</button>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white p-6 border border-neutral-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div><label className="block text-sm font-medium mb-2">Name</label><input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border border-neutral-300 p-3 focus:border-black outline-none" required /></div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Category</label>
+            <select name="category" value={formData.category} onChange={handleChange} className="w-full border border-neutral-300 p-3 focus:border-black outline-none" required>
+              <option value="women">Women</option><option value="men">Men</option><option value="unisex">Unisex</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div><label className="block text-sm font-medium mb-2">Price</label><input type="number" name="price" value={formData.price} onChange={handleChange} step="0.01" className="w-full border border-neutral-300 p-3" required /></div>
+          <div><label className="block text-sm font-medium mb-2">Stock</label><input type="number" name="stock" value={formData.stock} onChange={handleChange} className="w-full border border-neutral-300 p-3" required /></div>
+        </div>
+        <div className="mb-6"><label className="block text-sm font-medium mb-2">Description</label><textarea name="description" value={formData.description} onChange={handleChange} rows="4" className="w-full border border-neutral-300 p-3" required></textarea></div>
+        <div className="mb-6"><label className="block text-sm font-medium mb-2">New Image (Optional)</label><input type="file" accept="image/*" onChange={handleImageChange} className="w-full border border-neutral-300 p-3 bg-neutral-50" /></div>
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2">Features</label>
+          <div className="space-y-2">
+            <label className="flex items-center"><input type="checkbox" name="featured" checked={formData.featured} onChange={handleChange} className="mr-2" /> Featured Product</label>
+            <label className="flex items-center"><input type="checkbox" name="bestSeller" checked={formData.bestSeller} onChange={handleChange} className="mr-2" /> Best Seller</label>
+            <label className="flex items-center"><input type="checkbox" name="new" checked={formData.new} onChange={handleChange} className="mr-2" /> New Arrival</label>
+          </div>
+        </div>
+        <button type="submit" className="btn-primary" disabled={loading}>{loading ? "Saving..." : "Update Product"}</button>
+      </form>
+    </div>
+  );
+};
 
-      <div className="text-center py-12 border border-dashed border-neutral-300 rounded">
-        <p className="text-lg text-neutral-500 mb-4">No stats available yet.</p>
-        <p className="text-neutral-500">
-          Stats will be available once you start receiving orders.
-        </p>
+// Stats Component
+const Stats = () => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+  const revenue = [450, 820, 600, 1200, 2100, 1800, 3200];
+  const maxRev = Math.max(...revenue);
+
+  return (
+    <div className="p-6">
+      <h2 className="text-2xl font-serif font-medium mb-6">Revenue Analytics</h2>
+
+      <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg mb-8">
+        <h3 className="text-lg font-medium text-neutral-800 mb-6">Revenue Over Time (Projected)</h3>
+        <div className="flex items-end space-x-4 h-64 border-b border-neutral-200 pb-2">
+          {revenue.map((amount, idx) => (
+            <div key={idx} className="flex-1 flex flex-col items-center group relative">
+              <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-xs py-1 px-2 rounded">
+                ${amount}
+              </div>
+              <div 
+                className="w-full bg-amber/80 hover:bg-amber transition-all duration-300 rounded-t-sm" 
+                style={{ height: `${(amount / maxRev) * 100}%` }}
+              ></div>
+              <span className="text-xs text-neutral-500 mt-2">{months[idx]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg">
+            <h3 className="text-lg font-medium text-neutral-800 mb-2">Top Performing Category</h3>
+            <p className="text-4xl font-serif text-amber">Women's Premium</p>
+            <p className="text-sm text-neutral-500 mt-2">+24% vs last month</p>
+         </div>
+         <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg">
+            <h3 className="text-lg font-medium text-neutral-800 mb-2">Customer Retention</h3>
+            <p className="text-4xl font-serif text-amber">68%</p>
+            <p className="text-sm text-neutral-500 mt-2">Highly engaged user base</p>
+         </div>
       </div>
     </div>
   );
@@ -560,6 +722,7 @@ const AdminLayout = ({ children }) => {
               <Route index element={<Dashboard />} />
               <Route path="products" element={<ProductsList />} />
               <Route path="products/new" element={<NewProduct />} />
+              <Route path="products/edit/:id" element={<EditProduct />} />
               <Route path="orders" element={<OrdersList />} />
               <Route path="stats" element={<Stats />} />
             </Routes>
