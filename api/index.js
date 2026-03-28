@@ -2,11 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -14,10 +9,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Razorpay
+// Initialize Razorpay with both Vercel and local environment Support
 const razorpay = new Razorpay({
-  key_id: process.env.VITE_RAZORPAY_KEY || 'rzp_live_SWYkjf5Rst1qAT',
-  key_secret: process.env.VITE_RAZORPAY_KEY_SECRET || 'VRNFwP86dO5CdVT1Z4WbDJrK',
+  key_id: process.env.VITE_RAZORPAY_KEY || process.env.RAZORPAY_KEY || 'rzp_live_SWYkjf5Rst1qAT',
+  key_secret: process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || 'VRNFwP86dO5CdVT1Z4WbDJrK',
 });
 
 // Create Order API
@@ -51,7 +46,7 @@ app.post('/api/create-order', async (req, res) => {
 // Verify Payment API
 app.post('/api/verify-payment', (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-  const secret = process.env.VITE_RAZORPAY_KEY_SECRET || 'VRNFwP86dO5CdVT1Z4WbDJrK';
+  const secret = process.env.VITE_RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || 'VRNFwP86dO5CdVT1Z4WbDJrK';
 
   const generated_signature = crypto
     .createHmac('sha256', secret)
@@ -65,13 +60,5 @@ app.post('/api/verify-payment', (req, res) => {
   }
 });
 
-// Serve frontend in production (Hostinger setup)
-app.use(express.static(path.join(__dirname, 'dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Essmey Backend Server running on port ${PORT}`);
-});
+// For Vercel, we export the app instead of calling app.listen()
+export default app;
