@@ -85,7 +85,7 @@ const ProductDetails = () => {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (shouldNavigate = false) => {
     if (product.stock === 0) {
       console.error("Product is out of stock");
       return;
@@ -96,6 +96,9 @@ const ProductDetails = () => {
     }
     try {
       addToCart(product, quantity);
+      if (shouldNavigate) {
+        navigate("/checkout");
+      }
       // console.log(`${product.name} added to cart!`);
     } catch (error) {
       console.error("Failed to add to cart", error);
@@ -224,17 +227,25 @@ const ProductDetails = () => {
                     </button>
                   </div>
                 </div>
-                <button
-                  onClick={handleAddToCart}
-                  className="btn-primary w-full text-lg py-4"
-                  disabled={product.stock === 0 || quantity > product.stock}
-                >
-                  {product.stock === 0
-                    ? "Out of Stock"
-                    : quantity > product.stock
-                    ? `Only ${product.stock} available`
-                    : "Add to Cart"}
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => handleAddToCart(false)}
+                    className="w-full border-2 border-black text-black font-medium py-4 rounded-md hover:bg-black hover:text-white transition-all duration-300 flex items-center justify-center gap-2"
+                    disabled={product.stock === 0 || quantity > product.stock}
+                  >
+                    <ShoppingBagIcon className="h-5 w-5" />
+                    Add to Cart
+                  </button>
+                  <button
+                    onClick={() => handleAddToCart(true)}
+                    className="w-full bg-black text-white font-medium py-4 rounded-md hover:bg-neutral-800 transition-all duration-300 shadow-lg"
+                    disabled={product.stock === 0 || quantity > product.stock}
+                  >
+                    {product.stock === 0
+                      ? "Out of Stock"
+                      : "Buy It Now"}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-6">
