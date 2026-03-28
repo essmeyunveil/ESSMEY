@@ -86,22 +86,12 @@ const AnimatedRoutes = () => {
 
 function App() {
   useEffect(() => {
-    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((registration) => {
-            // console.log("ServiceWorker registration successful");
-          })
-          .catch((err) => {
-            // console.log("ServiceWorker registration failed: ", err);
-          });
-      });
-    } else if ("serviceWorker" in navigator) {
-      // Unregister service worker in development to avoid caching issues
+    // Forcefully unregister all service workers to fix production caching issues
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => {
           registration.unregister();
+          // console.log("ServiceWorker unregistered successfully");
         });
       });
     }
