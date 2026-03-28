@@ -3,6 +3,7 @@ import { useCartStore } from "../store/useCartStore";
 import { useWishlistStore } from "../store/useWishlistStore";
 import { useProducts } from "../features/products/useProducts";
 import ProductCard from "./ProductCard";
+import { getImageUrl } from "../utils/sanity";
 
 const SignatureScent = () => {
   const { items: cartItems } = useCartStore();
@@ -69,7 +70,7 @@ const SignatureScent = () => {
           <div className="hidden lg:block relative h-[550px] w-full rounded-2xl overflow-hidden shadow-2xl group">
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 transition-opacity duration-500 group-hover:opacity-60"></div>
             <img 
-              src={recommendedProduct ? recommendedProduct.image : "/images/tusu.jpg"} 
+              src={recommendedProduct && recommendedProduct.images?.[0] ? getImageUrl(recommendedProduct.images[0]) : "/images/tusu.jpg"} 
               alt="Signature Scent" 
               className="w-full h-full object-cover transition-transform duration-[20s] group-hover:scale-110"
             />

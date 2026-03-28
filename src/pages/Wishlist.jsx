@@ -2,7 +2,7 @@ import { useWishlistStore } from "../store/useWishlistStore";
 import { useCartStore } from "../store/useCartStore";
 import { Link } from "react-router-dom";
 import { XMarkIcon, ShoppingBagIcon } from "@heroicons/react/24/outline";
-import { urlFor } from "../utils/sanity";
+import { getImageUrl } from "../utils/sanity";
 
 const Wishlist = () => {
   const wishlistItems = useWishlistStore((state) => state.items);
@@ -47,8 +47,8 @@ const Wishlist = () => {
                         <Link to={`/product/${item._id}`} className="block">
                           <img
                             src={
-                              item.images?.[0]?.asset?._ref
-                                ? urlFor(item.images[0])
+                              item.images && item.images.length > 0
+                                ? getImageUrl(item.images[0])
                                 : "https://via.placeholder.com/300x400?text=No+Image"
                             }
                             alt={item.name}

@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useProducts } from "../features/products/useProducts";
 import toast from "react-hot-toast";
 import { useAuth } from "../utils/AuthContext";
-import { client } from "../utils/sanity";
+import { client, getImageUrl } from "../utils/sanity";
 
 // Dashboard Component
 const Dashboard = () => {
@@ -148,7 +148,11 @@ const ProductsList = () => {
                 <td className="border border-neutral-200 p-3">
                   <div className="w-12 h-12 bg-neutral-100 overflow-hidden rounded">
                     <img
-                      src={product.image || "/images/tusu.jpg"}
+                      src={
+                        product.images && product.images.length > 0
+                          ? getImageUrl(product.images[0])
+                          : product.image || "/images/tusu.jpg"
+                      }
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />

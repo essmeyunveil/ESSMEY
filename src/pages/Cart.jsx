@@ -2,6 +2,7 @@ import { useCartStore } from "../store/useCartStore";
 import { Link, useNavigate } from "react-router-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { ShoppingBagIcon, SparklesIcon, ArrowTrendingUpIcon, TagIcon } from "@heroicons/react/24/outline";
+import { getImageUrl } from "../utils/sanity";
              
 const FALLBACK_IMAGE = "/images/product-1.jpg";
 
@@ -16,7 +17,7 @@ const Cart = () => {
   return (
     <div className="pt-24 pb-16 min-h-[50vh]">
       <div className="container-custom">
-        <h1 className="text-3xl font-serif font-bold mb-8">Your Cart</h1>
+        <h1 className="text-3xl font-serif font-bold mb-8">Your Shopping Cart | Essmey Handcrafted Perfumes</h1>
         {!cartItems || cartItems.length === 0 ? (
           <div className="text-center mt-16 space-y-12">
             <div className="space-y-8">
@@ -104,7 +105,7 @@ const Cart = () => {
                       // Get the image URL from the item
                       const imageUrl =
                         item.images && item.images.length > 0
-                          ? item.images[0]
+                          ? getImageUrl(item.images[0]) || FALLBACK_IMAGE
                           : FALLBACK_IMAGE;
 
                       return (
@@ -119,7 +120,7 @@ const Cart = () => {
                             >
                               <img
                                 src={imageUrl}
-                                alt={item.name}
+                                alt={`${item.name} - Handcrafted Fragrance in your cart`}
                                 className="w-16 h-20 object-cover rounded border"
                                 onError={(e) => {
                                   e.target.src = FALLBACK_IMAGE;

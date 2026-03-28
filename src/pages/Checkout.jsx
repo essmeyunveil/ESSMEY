@@ -136,8 +136,8 @@ const Checkout = () => {
 
   const handleOrder = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    setLoading(true);
 
     const validationErrors = validate(form);
     if (Object.keys(validationErrors).length > 0) {
@@ -147,6 +147,7 @@ const Checkout = () => {
     }
 
     try {
+      const customOrderId = generateOrderId();
       const userDoc = await client.fetch(
         `*[_type == "user" && _id == $userId][0]`,
         { userId: user.uid }
@@ -161,13 +162,70 @@ const Checkout = () => {
         });
       }
 
-      // Razorpay options (handler removed!)
+      const createOrderRecord = async (transactionId = null) => {
+        const orderData = {
+          _type: "order",
+          orderId: customOrderId,
+          totalAmount: cartSubtotal,
+          shippingAddress: `${form.address}, ${form.city}, ${form.state} - ${form.pincode}`,
+          phoneNumber: form.phone,
+          customerName: form.name,
+          email: form.email,
+          city: form.city,
+          state: form.state,
+          deliveryStatus: "confirmed",
+          paymentMethod: "online",
+          paymentStatus: "paid",
+          transactionId: transactionId,
+          items: cartItems.map((item) => ({
+            _key:
+              Math.random().toString(36).substring(2, 11) +
+              Date.now().toString(36),
+            product: {
+              _type: "reference",
+              _ref: item._id,
+            },
+            quantity: item.quantity,
+          })),
+          placedAt: new Date().toISOString(),
+          userId: user.uid,
+        };
+
+        await client.create(orderData);
+        clearCart();
+        addToast(
+          "Payment successful! Your order has been placed.",
+          "success"
+        );
+        
+        setTimeout(() => {
+          navigate("/thank-you", { state: { orderId: customOrderId } });
+        }, 500);
+      };
+
+      // Request a secure Order ID from the newly created Hostinger Node.js backend
+      const orderResponse = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: cartSubtotal,
+          currency: "INR",
+          receipt: customOrderId
+        })
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error("Failed to securely generate an Order ID from server");
+      }
+
+      const orderData = await orderResponse.json();
+
       const razorpayOptions = {
-        amount: cartSubtotal * 100,
-        currency: "INR",
+        amount: orderData.amount, // fetched natively from razorpay
+        currency: orderData.currency,
         name: "Essmey Perfume",
         description: "Payment for your order",
-        orderId: undefined, // If you have backend, insert actual orderId
+        orderId: orderData.orderId, // <--- PROD FIX Correct variable mapping
         prefill: {
           name: form.name,
           email: form.email,
@@ -180,81 +238,15 @@ const Checkout = () => {
 
       await openRazorpay(razorpayOptions)
         .then(async (response) => {
-          // Payment successful
-          const newOrderId = generateOrderId();
-          const orderData = {
-            _type: "order",
-            orderId: newOrderId,
-            customerName: form.name,
-            email: form.email,
-            phone: form.phone,
-            address: form.address,
-            city: form.city,
-            state: form.state,
-            pincode: form.pincode,
-            notes: form.notes,
-            deliveryStatus: "confirmed",
-            items: cartItems.map((item) => ({
-              _key:
-                item._id ||
-                item.name + "-" + Math.random().toString(36).substr(2, 9),
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-            })),
-            total: cartSubtotal,
-            placedAt: new Date().toISOString(),
-            userId: user.uid,
-          };
-
-          try {
-            try {
-              // First, create the order
-              const orderResult = await client.create(orderData);
-              // console.log('Order created successfully:', orderResult);
-              
-              // Verify the order was created by fetching it back
-              const createdOrder = await client.fetch(
-                `*[_type == "order" && orderId == $orderId][0]`,
-                { orderId: newOrderId }
-              );
-              
-              if (!createdOrder) {
-                throw new Error('Order not found after creation');
-              }
-              
-              // console.log('Order verified in CMS:', createdOrder);
-              
-              // Clear cart and show success message
-              clearCart();
-              addToast(
-                "Payment successful! Your order has been placed.",
-                "success"
-              );
-              
-              // Wait a moment for the order to be created before navigating
-              setTimeout(() => {
-                navigate("/thank-you", { state: { orderId: newOrderId } });
-              }, 500);
-            } catch (error) {
-              console.error('Error in order creation:', error);
-              setError(error.message || 'Failed to create order in CMS');
-              addToast('Failed to create order in CMS. Please try again.', 'error');
-              throw error; // Re-throw to maintain the error chain
-            }
-          } catch (error) {
-            console.error("Error creating order:", error);
-            addToast("Error creating order after payment", "error");
-          }
+          await createOrderRecord(response.razorpay_payment_id);
         })
         .catch((error) => {
-          setError(error.message || "Payment failed or was cancelled");
-          addToast(error.message || "Payment failed or was cancelled", "error");
+          throw new Error(error.message || "Payment failed or was cancelled");
         });
     } catch (error) {
       console.error("Order error:", error);
-      setError(error.message || "Something went wrong with the payment");
-      addToast(error.message || "Payment failed or was cancelled", "error");
+      setError(error.message || "Something went wrong. Please try again.");
+      addToast(error.message || "Order placement failed.", "error");
     } finally {
       setLoading(false);
     }
@@ -269,7 +261,7 @@ const Checkout = () => {
           onSubmit={handleOrder}
         >
           <h1 className="text-2xl font-serif font-bold mb-4">
-            Shipping Details
+            Secure Checkout | Shipping Details
           </h1>
           {(error || contextError) && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -398,6 +390,8 @@ const Checkout = () => {
               />
             </div>
           </div>
+
+
           <button
             type="submit"
             className="btn-primary w-full mt-4"
@@ -409,7 +403,7 @@ const Checkout = () => {
                 Processing...
               </div>
             ) : (
-              "Place Order"
+              "Pay Now"
             )}
           </button>
         </form>
@@ -425,8 +419,8 @@ const Checkout = () => {
               </div>
             ))}
             <div className="border-t pt-4">
-              <div className="flex justify-between font-bold">
-                <span>Total</span>
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total Amount</span>
                 <span>₹{cartSubtotal}</span>
               </div>
             </div>

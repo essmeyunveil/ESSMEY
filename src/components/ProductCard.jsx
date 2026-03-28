@@ -120,7 +120,7 @@ const ProductCard = ({ product }) => {
             )}
             <img
               src={mainImage}
-              alt={product.name}
+              alt={`${product.name} - Handcrafted Premium Perfume by Essmey`}
               className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${
                 imageLoading ? "opacity-0" : "opacity-100"
               }`}

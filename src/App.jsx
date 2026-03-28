@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 10, // 10 minutes (longer for better performance)
+      gcTime: 1000 * 60 * 60,   // 1 hour cache duration
       refetchOnWindowFocus: false,
+      retry: 1,
     },
   },
 });
@@ -125,7 +127,14 @@ function App() {
                 <Navbar />
                 <SearchModal />
                 <main className="flex-grow">
-                    <Suspense fallback={<div className="min-h-screen flex flex-col items-center justify-center pt-10"><div className="text-2xl font-serif text-neutral-300 tracking-[0.2em] font-medium uppercase animate-pulse drop-shadow-sm">Essmey</div></div>}>
+                    <Suspense fallback={
+                      <div className="min-h-[60vh] flex flex-col items-center justify-center p-12">
+                        <div className="w-12 h-12 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-4"></div>
+                        <div className="text-sm font-serif text-neutral-400 tracking-widest uppercase animate-pulse">
+                          Essmey
+                        </div>
+                      </div>
+                    }>
                       <AnimatedRoutes />
                   </Suspense>
                 </main>
