@@ -189,40 +189,12 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Setup Recaptcha for Phone Auth
-  const setupRecaptcha = (elementId) => {
-    try {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-      }
-      
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
-        size: 'invisible',
-        callback: (response) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-          // console.log("reCAPTCHA solved");
-        },
-        'expired-callback': () => {
-          // Response expired. Ask user to solve reCAPTCHA again.
-          logError(null, "reCAPTCHA expired");
-        }
-      });
-      return window.recaptchaVerifier;
-    } catch (error) {
-      logError(error, "Recaptcha setup");
-      throw error;
-    }
-  };
-
   // Send OTP to phone
-  const sendOtp = async (phoneNumber) => {
+  const sendOtp = async (phoneNumber, appVerifier) => {
     try {
       setError(null);
       setLoading(true);
-      
-      const appVerifier = setupRecaptcha('recaptcha-container');
       const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      
       setLoading(false);
       return confirmationResult;
     } catch (error) {

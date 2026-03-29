@@ -2,6 +2,8 @@ import { useState,useEffect } from "react";
 import { useAuth } from "../utils/AuthContext";
 import { useNavigate, Navigate, Link, useLocation } from "react-router-dom";
 import { useToastContext } from "../utils/ToastContext";
+import { RecaptchaVerifier } from "firebase/auth";
+import { auth } from "../utils/firebase";
 
 const Login = () => {
   const { user, login, signup, googleLogin } = useAuth();
@@ -21,7 +23,31 @@ const Login = () => {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState(null);
   const { sendOtp, confirmOtp } = useAuth();
+
+  // Initialize Recaptcha
+  useEffect(() => {
+    if (loginMethod === "phone" && !recaptchaVerifier) {
+      try {
+        const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+             // console.log("recaptcha solved")
+          }
+        });
+        setRecaptchaVerifier(verifier);
+      } catch (err) {
+        console.error("Recaptcha init error:", err);
+      }
+    }
+    
+    return () => {
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+      }
+    };
+  }, [loginMethod, recaptchaVerifier]);
 
   // Show toast notification if redirected from checkout
   useEffect(() => {
@@ -103,12 +129,16 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const result = await sendOtp(phoneNumber);
+      if (!recaptchaVerifier) {
+        throw new Error("Security check not ready. Please refresh.");
+      }
+      const result = await sendOtp(phoneNumber, recaptchaVerifier);
       setConfirmationResult(result);
       setOtpSent(true);
       addToast(`OTP sent successfully to ${phoneNumber}`, "success");
     } catch (err) {
-      addToast("Failed to send OTP. Please try again.", "error");
+      console.error("SMS Error:", err);
+      addToast(err.message || "Failed to send OTP. Please try again.", "error");
     } finally {
       setLoading(false);
     }
