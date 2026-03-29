@@ -14,8 +14,6 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
 } from "firebase/auth";
 import { auth, handleAuthError } from "./firebase";
 import { client } from "./sanity";
@@ -189,40 +187,6 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Send OTP to phone
-  const sendOtp = async (phoneNumber, appVerifier) => {
-    try {
-      setError(null);
-      setLoading(true);
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      setLoading(false);
-      return confirmationResult;
-    } catch (error) {
-      logError(error, "Send OTP");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
-  // Confirm OTP
-  const confirmOtp = async (confirmationResult, otpCode) => {
-    try {
-      setError(null);
-      setLoading(true);
-      const result = await confirmationResult.confirm(otpCode);
-      setLoading(false);
-      return result;
-    } catch (error) {
-      logError(error, "Confirm OTP");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
   // Logout function
   const logout = async () => {
     try {
@@ -256,8 +220,6 @@ const AuthProvider = ({ children }) => {
     googleLogin,
     forgotPassword,
     logout,
-    sendOtp,
-    confirmOtp,
   };
 
   if (loading) {

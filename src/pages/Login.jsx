@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../utils/AuthContext";
 import { useNavigate, Navigate, Link, useLocation } from "react-router-dom";
 import { useToastContext } from "../utils/ToastContext";
-import { RecaptchaVerifier } from "firebase/auth";
-import { auth } from "../utils/firebase";
 
 const Login = () => {
   const { user, login, signup, googleLogin } = useAuth();
@@ -12,31 +10,10 @@ const Login = () => {
   const location = useLocation();
 
   const [isLogin, setIsLogin] = useState(true);
-  const [loginMethod, setLoginMethod] = useState("email"); // "email" or "phone"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Phone Auth states
-  const [phoneNumber, setPhoneNumber] = useState("+91");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const { sendOtp, confirmOtp } = useAuth();
-
-  // Initialize Recaptcha - This is now one-time and bulletproof
-  useEffect(() => {
-    if (loginMethod === "phone" && !window.recaptchaVerifier) {
-      try {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible'
-        });
-      } catch (err) {
-        console.error("Recaptcha init error:", err);
-      }
-    }
-  }, [loginMethod]);
 
   // Show toast notification if redirected from checkout
   useEffect(() => {
@@ -55,17 +32,6 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // If we are in Phone Login mode, the buttons handles their own logic
-    // We just prevent a generic form submission from triggering Email check
-    if (loginMethod === "phone") {
-        if (!otpSent) {
-            handleSendOtp(e);
-        } else {
-            handleVerifyOtp(e);
-        }
-        return;
-    }
-
     if (!isLogin && password !== confirmPassword) {
       addToast("Passwords do not match.", "error");
       return;
@@ -76,18 +42,11 @@ const Login = () => {
       if (isLogin) {
         const result = await login(email, password);
         const user = result.user;
-        // Format the current time
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        });
         
         // Get user's name from email (before @ symbol)
         const userName = email.split('@')[0];
         
-        // Show success toast with user's name and time
+        // Show success toast
         addToast(`${userName} has successfully logged in`, "success");
       } else {
         await signup(email, password);
@@ -98,60 +57,13 @@ const Login = () => {
       const fromPath = location.state?.from || "/account";
       navigate(fromPath);
     } catch (err) {
-      const userName = email.split('@')[0];
+      const userName = email.split('@')[0] || "User";
       addToast(
         isLogin
           ? `${userName} failed to login. Please check your credentials.`
           : `${userName} failed to sign up. Please try again.`,
         "error"
       );
-      setLoading(false);
-    }
-  };
-
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
-    if (!phoneNumber || phoneNumber.length < 13) {
-      addToast("Please enter a valid phone number with country code (e.g., +91).", "error");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (!window.recaptchaVerifier) {
-        // Fallback initialization
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible'
-        });
-      }
-      const result = await sendOtp(phoneNumber, window.recaptchaVerifier);
-      setConfirmationResult(result);
-      setOtpSent(true);
-      addToast(`OTP sent successfully to ${phoneNumber}`, "success");
-    } catch (err) {
-      console.error("SMS Error:", err);
-      addToast(err.message || "Failed to send OTP. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    if (!otp || otp.length !== 6) {
-      addToast("Please enter the 6-digit OTP.", "error");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await confirmOtp(confirmationResult, otp);
-      addToast("Phone verified! Logged in successfully.", "success");
-      const fromPath = location.state?.from || "/account";
-      navigate(fromPath);
-    } catch (err) {
-      addToast("Invalid OTP. Please try again.", "error");
-    } finally {
       setLoading(false);
     }
   };
@@ -177,171 +89,74 @@ const Login = () => {
         <h1 className="text-3xl font-semibold mb-8 text-center text-amber-600">
           {isLogin ? "Login" : "Sign Up"}
         </h1>
-        <div className="flex mb-8 border-b">
-          <button
-            type="button"
-            className={`flex-1 pb-2 text-sm font-medium transition-colors ${
-              loginMethod === "email"
-                ? "border-b-2 border-amber-600 text-amber-600"
-                : "text-gray-500 hover:text-amber-600"
-            }`}
-            onClick={() => setLoginMethod("email")}
+        
+        <div className="mb-5">
+          <label
+            htmlFor="email"
+            className="block mb-2 font-medium text-gray-700"
           >
             Email
-          </button>
-          <button
-            type="button"
-            className={`flex-1 pb-2 text-sm font-medium transition-colors ${
-              loginMethod === "phone"
-                ? "border-b-2 border-amber-600 text-amber-600"
-                : "text-gray-500 hover:text-amber-600"
-            }`}
-            onClick={() => {
-              setLoginMethod("phone");
-              setIsLogin(true); // Phone login is always "Login" style
-            }}
-          >
-            Mobile OTP
-          </button>
+          </label>
+          <input
+            type="email"
+            id="email"
+            className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="username"
+          />
         </div>
-
-        {loginMethod === "email" ? (
-          <>
-            <div className="mb-5">
-              <label
-                htmlFor="email"
-                className="block mb-2 font-medium text-gray-700"
-              >
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="username"
-              />
-            </div>
-            <div className="mb-7">
-              <label
-                htmlFor="password"
-                className="block mb-2 font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={isLogin ? "current-password" : "new-password"}
-              />
-            </div>
-            {!isLogin && (
-              <div className="mb-7">
-                <label
-                  htmlFor="confirmPassword"
-                  className="block mb-2 font-medium text-gray-700"
-                >
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required={!isLogin}
-                  autoComplete="new-password"
-                />
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-md font-semibold transition-colors disabled:opacity-50"
+        <div className="mb-7">
+          <label
+            htmlFor="password"
+            className="block mb-2 font-medium text-gray-700"
+          >
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete={isLogin ? "current-password" : "new-password"}
+          />
+        </div>
+        {!isLogin && (
+          <div className="mb-7">
+            <label
+              htmlFor="confirmPassword"
+              className="block mb-2 font-medium text-gray-700"
             >
-              {loading
-                ? isLogin
-                  ? "Logging in..."
-                  : "Signing up..."
-                : isLogin
-                  ? "Login"
-                  : "Sign Up"}
-            </button>
-          </>
-        ) : (
-          /* Phone Login UI */
-          <div className="space-y-6">
-            {!otpSent ? (
-              <>
-                <div className="mb-5">
-                  <label className="block mb-2 font-medium text-gray-700">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="+91 00000 00000"
-                    className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-2 italic">
-                    Include country code (e.g., +91)
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSendOtp}
-                  disabled={loading}
-                  className="w-full bg-black text-white py-3 rounded-md font-semibold transition-colors disabled:opacity-50"
-                >
-                  {loading ? "Sending..." : "Send OTP via SMS"}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="mb-5">
-                  <label className="block mb-2 font-medium text-gray-700 text-center">
-                    Enter the OTP sent to {phoneNumber}
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="000000"
-                    className="w-full border-b-2 border-amber-600 p-3 text-center text-2xl tracking-[1rem] focus:outline-none transition font-mono"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                    required
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleVerifyOtp}
-                  disabled={loading}
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-md font-semibold transition-colors disabled:opacity-50"
-                >
-                  {loading ? "Verifying..." : "Verify & Login"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOtpSent(false);
-                    setOtp("");
-                  }}
-                  className="w-full text-sm text-gray-500 hover:text-amber-600 transition"
-                >
-                  Change phone number
-                </button>
-              </>
-            )}
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required={!isLogin}
+              autoComplete="new-password"
+            />
           </div>
         )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-md font-semibold transition-colors disabled:opacity-50"
+        >
+          {loading
+            ? isLogin
+              ? "Logging in..."
+              : "Signing up..."
+            : isLogin
+              ? "Login"
+              : "Sign Up"}
+        </button>
+        
         <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
           {isLogin && (
             <Link
