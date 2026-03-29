@@ -1,4 +1,4 @@
-import { useState,useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../utils/AuthContext";
 import { useNavigate, Navigate, Link, useLocation } from "react-router-dom";
 import { useToastContext } from "../utils/ToastContext";
@@ -23,12 +23,12 @@ const Login = () => {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const [recaptchaVerifier, setRecaptchaVerifier] = useState(null);
+  const recaptchaVerifierRef = useRef(null);
   const { sendOtp, confirmOtp } = useAuth();
 
   // Initialize Recaptcha
   useEffect(() => {
-    if (loginMethod === "phone" && !recaptchaVerifier) {
+    if (loginMethod === "phone" && !recaptchaVerifierRef.current) {
       try {
         const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
@@ -36,18 +36,23 @@ const Login = () => {
              // console.log("recaptcha solved")
           }
         });
-        setRecaptchaVerifier(verifier);
+        recaptchaVerifierRef.current = verifier;
       } catch (err) {
         console.error("Recaptcha init error:", err);
       }
     }
     
     return () => {
-      if (recaptchaVerifier) {
-        recaptchaVerifier.clear();
+      if (recaptchaVerifierRef.current) {
+        try {
+            recaptchaVerifierRef.current.clear();
+            recaptchaVerifierRef.current = null;
+        } catch (e) {
+            console.warn("Recaptcha clear error:", e);
+        }
       }
     };
-  }, [loginMethod, recaptchaVerifier]);
+  }, [loginMethod]);
 
   // Show toast notification if redirected from checkout
   useEffect(() => {
@@ -129,10 +134,14 @@ const Login = () => {
 
     setLoading(true);
     try {
-      if (!recaptchaVerifier) {
-        throw new Error("Security check not ready. Please refresh.");
+      if (!recaptchaVerifierRef.current) {
+        // Fallback initialization if it hasn't happened
+        const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible'
+        });
+        recaptchaVerifierRef.current = verifier;
       }
-      const result = await sendOtp(phoneNumber, recaptchaVerifier);
+      const result = await sendOtp(phoneNumber, recaptchaVerifierRef.current);
       setConfirmationResult(result);
       setOtpSent(true);
       addToast(`OTP sent successfully to ${phoneNumber}`, "success");
