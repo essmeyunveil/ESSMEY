@@ -103,6 +103,15 @@ export const handleAuthError = (error) => {
     case "auth/popup-closed-by-user":
       errorMessage = "Sign in was cancelled";
       break;
+    case "auth/invalid-phone-number":
+      errorMessage = "Invalid phone number format";
+      break;
+    case "auth/invalid-verification-code":
+      errorMessage = "Incorrect OTP code. Please try again.";
+      break;
+    case "auth/code-expired":
+      errorMessage = "OTP has expired. Please request a new one.";
+      break;
     default:
       logError(error, "Authentication");
   }

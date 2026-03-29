@@ -40,6 +40,17 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // If we are in Phone Login mode, the buttons handles their own logic
+    // We just prevent a generic form submission from triggering Email check
+    if (loginMethod === "phone") {
+        if (!otpSent) {
+            handleSendOtp(e);
+        } else {
+            handleVerifyOtp(e);
+        }
+        return;
+    }
+
     if (!isLogin && password !== confirmPassword) {
       addToast("Passwords do not match.", "error");
       return;
