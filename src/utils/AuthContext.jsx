@@ -14,6 +14,8 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
 } from "firebase/auth";
 import { auth, handleAuthError } from "./firebase";
 import { client } from "./sanity";
@@ -187,6 +189,68 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // Setup Recaptcha for Phone Auth
+  const setupRecaptcha = (elementId) => {
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
+      
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
+        size: 'invisible',
+        callback: (response) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+          // console.log("reCAPTCHA solved");
+        },
+        'expired-callback': () => {
+          // Response expired. Ask user to solve reCAPTCHA again.
+          logError(null, "reCAPTCHA expired");
+        }
+      });
+      return window.recaptchaVerifier;
+    } catch (error) {
+      logError(error, "Recaptcha setup");
+      throw error;
+    }
+  };
+
+  // Send OTP to phone
+  const sendOtp = async (phoneNumber) => {
+    try {
+      setError(null);
+      setLoading(true);
+      
+      const appVerifier = setupRecaptcha('recaptcha-container');
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      
+      setLoading(false);
+      return confirmationResult;
+    } catch (error) {
+      logError(error, "Send OTP");
+      const errorMessage = handleAuthError(error);
+      setError(errorMessage);
+      setLoading(false);
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Confirm OTP
+  const confirmOtp = async (confirmationResult, otpCode) => {
+    try {
+      setError(null);
+      setLoading(true);
+      const result = await confirmationResult.confirm(otpCode);
+      setLoading(false);
+      return result;
+    } catch (error) {
+      logError(error, "Confirm OTP");
+      const errorMessage = handleAuthError(error);
+      setError(errorMessage);
+      setLoading(false);
+      throw new Error(errorMessage);
+    }
+  };
+
   // Logout function
   const logout = async () => {
     try {
@@ -220,6 +284,8 @@ const AuthProvider = ({ children }) => {
     googleLogin,
     forgotPassword,
     logout,
+    sendOtp,
+    confirmOtp,
   };
 
   if (loading) {
