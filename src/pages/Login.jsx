@@ -318,10 +318,10 @@ const Login = () => {
                 </button>
               </>
             )}
-            {/* Required Hidden Div for Recaptcha */}
-            <div id="recaptcha-container" className="mt-4 flex justify-center"></div>
           </div>
         )}
+        {/* Required Hidden Div for Recaptcha - Moved outside for stability */}
+        <div id="recaptcha-container" className="mt-4 flex justify-center"></div>
         <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
           {isLogin && (
             <Link
