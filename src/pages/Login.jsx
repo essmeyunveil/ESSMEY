@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../utils/AuthContext";
 import { useNavigate, Navigate, Link, useLocation } from "react-router-dom";
 import { useToastContext } from "../utils/ToastContext";
@@ -23,35 +23,19 @@ const Login = () => {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const recaptchaVerifierRef = useRef(null);
   const { sendOtp, confirmOtp } = useAuth();
 
-  // Initialize Recaptcha
+  // Initialize Recaptcha - This is now one-time and bulletproof
   useEffect(() => {
-    if (loginMethod === "phone" && !recaptchaVerifierRef.current) {
+    if (loginMethod === "phone" && !window.recaptchaVerifier) {
       try {
-        const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-          callback: () => {
-             // console.log("recaptcha solved")
-          }
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible'
         });
-        recaptchaVerifierRef.current = verifier;
       } catch (err) {
         console.error("Recaptcha init error:", err);
       }
     }
-    
-    return () => {
-      if (recaptchaVerifierRef.current) {
-        try {
-            recaptchaVerifierRef.current.clear();
-            recaptchaVerifierRef.current = null;
-        } catch (e) {
-            console.warn("Recaptcha clear error:", e);
-        }
-      }
-    };
   }, [loginMethod]);
 
   // Show toast notification if redirected from checkout
@@ -134,14 +118,13 @@ const Login = () => {
 
     setLoading(true);
     try {
-      if (!recaptchaVerifierRef.current) {
-        // Fallback initialization if it hasn't happened
-        const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      if (!window.recaptchaVerifier) {
+        // Fallback initialization
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
             size: 'invisible'
         });
-        recaptchaVerifierRef.current = verifier;
       }
-      const result = await sendOtp(phoneNumber, recaptchaVerifierRef.current);
+      const result = await sendOtp(phoneNumber, window.recaptchaVerifier);
       setConfirmationResult(result);
       setOtpSent(true);
       addToast(`OTP sent successfully to ${phoneNumber}`, "success");
@@ -359,8 +342,6 @@ const Login = () => {
             )}
           </div>
         )}
-        {/* Required Hidden Div for Recaptcha - Moved outside for stability */}
-        <div id="recaptcha-container" className="mt-4 flex justify-center"></div>
         <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
           {isLogin && (
             <Link
