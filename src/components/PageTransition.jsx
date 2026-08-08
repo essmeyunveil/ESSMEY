@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 
 const pageVariants = {
   initial: {
@@ -16,7 +16,7 @@ const pageVariants = {
 };
 
 const pageTransition = {
-  type: 'tween',
+  type: "tween",
   ease: [0.25, 0.1, 0.25, 1], // Cinematic Dior-esque ease
   duration: 0.6,
 };

@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { client } from '../../utils/sanity';
+import { useQuery } from "@tanstack/react-query";
+import { client } from "../../utils/sanity";
 
 export const useTestimonials = () => {
   return useQuery({
-    queryKey: ['testimonials'],
+    queryKey: ["testimonials"],
     queryFn: async () => {
       try {
         const data = await client.fetch(
@@ -23,6 +23,6 @@ export const useTestimonials = () => {
         return [];
       }
     },
-    staleTime: 1000 * 60 * 60, 
+    staleTime: 1000 * 60 * 60,
   });
 };

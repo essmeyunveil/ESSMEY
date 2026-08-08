@@ -278,7 +278,21 @@ const About = () => {
           behind-the-scenes glimpses, and more.
         </p>
         <p className="mb-8 font-medium">
-          Contact us at <a href="mailto:essmeyunveil@gmail.com" className="text-amber hover:underline text-lg">essmeyunveil@gmail.com</a> or call <a href="tel:+916284236466" className="text-amber hover:underline text-lg">+91 6284236466</a>.
+          Contact us at{" "}
+          <a
+            href="mailto:essmeyunveil@gmail.com"
+            className="text-amber hover:underline text-lg"
+          >
+            essmeyunveil@gmail.com
+          </a>{" "}
+          or call{" "}
+          <a
+            href="tel:+916284236466"
+            className="text-amber hover:underline text-lg"
+          >
+            +91 6284236466
+          </a>
+          .
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link

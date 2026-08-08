@@ -14,7 +14,7 @@ export const useAppContext = () => {
 
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);

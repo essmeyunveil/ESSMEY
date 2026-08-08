@@ -1,17 +1,22 @@
 import { useEffect, lazy, Suspense } from "react";
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 10, // 10 minutes (longer for better performance)
-      gcTime: 1000 * 60 * 60,   // 1 hour cache duration
+      gcTime: 1000 * 60 * 60, // 1 hour cache duration
       refetchOnWindowFocus: false,
       retry: 1,
     },
   },
 });
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/PageTransition";
 const Home = lazy(() => import("./pages/Home"));
@@ -55,30 +60,198 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageTransition><Home /></PageTransition>} />
-        <Route path="/shop" element={<PageTransition><Shop /></PageTransition>} />
-        <Route path="/product/:id" element={<PageTransition><ProductDetails /></PageTransition>} />
-        <Route path="/about" element={<PageTransition><About /></PageTransition>} />
-        <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
-        <Route path="/cart" element={<PageTransition><Cart /></PageTransition>} />
-        <Route path="/checkout" element={<PageTransition><Checkout /></PageTransition>} />
-        <Route path="/admin/*" element={<PageTransition><Admin /></PageTransition>} />
-        <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
-        <Route path="/forgot-password" element={<PageTransition><ForgotPassword /></PageTransition>} />
-        <Route path="/wishlist" element={<PageTransition><Wishlist /></PageTransition>} />
-        <Route path="/search" element={<PageTransition><SearchResults /></PageTransition>} />
-        <Route path="/account/*" element={<PageTransition><Account /></PageTransition>} />
-        <Route path="/shipping" element={<PageTransition><Shipping /></PageTransition>} />
-        <Route path="/faq" element={<PageTransition><FAQ /></PageTransition>} />
-        <Route path="/terms" element={<PageTransition><Terms /></PageTransition>} />
-        <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
-        <Route path="/track-order" element={<PageTransition><TransOrder /></PageTransition>} />
-        <Route path="/blog" element={<PageTransition><Blog /></PageTransition>} />
-        <Route path="/blog/:slug" element={<PageTransition><BlogPost /></PageTransition>} />
-        <Route path="/thank-you" element={<PageTransition><ThankYou /></PageTransition>} />
-        <Route path="/order/:orderId" element={<PageTransition><OrderDetails /></PageTransition>} />
-        <Route path="/scent-finder" element={<PageTransition><ScentFinder /></PageTransition>} />
-        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+        <Route
+          path="/"
+          element={
+            <PageTransition>
+              <Home />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/shop"
+          element={
+            <PageTransition>
+              <Shop />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/product/:id"
+          element={
+            <PageTransition>
+              <ProductDetails />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <PageTransition>
+              <About />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <PageTransition>
+              <Contact />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <PageTransition>
+              <Cart />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <PageTransition>
+              <Checkout />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <PageTransition>
+              <Admin />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PageTransition>
+              <Login />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PageTransition>
+              <ForgotPassword />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/wishlist"
+          element={
+            <PageTransition>
+              <Wishlist />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <PageTransition>
+              <SearchResults />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/account/*"
+          element={
+            <PageTransition>
+              <Account />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/shipping"
+          element={
+            <PageTransition>
+              <Shipping />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/faq"
+          element={
+            <PageTransition>
+              <FAQ />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <PageTransition>
+              <Terms />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <PageTransition>
+              <Privacy />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/track-order"
+          element={
+            <PageTransition>
+              <TransOrder />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/blog"
+          element={
+            <PageTransition>
+              <Blog />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/blog/:slug"
+          element={
+            <PageTransition>
+              <BlogPost />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/thank-you"
+          element={
+            <PageTransition>
+              <ThankYou />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/order/:orderId"
+          element={
+            <PageTransition>
+              <OrderDetails />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/scent-finder"
+          element={
+            <PageTransition>
+              <ScentFinder />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <PageTransition>
+              <NotFound />
+            </PageTransition>
+          }
+        />
       </Routes>
     </AnimatePresence>
   );
@@ -101,38 +274,43 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <ChakraProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <AppProvider>
-              <ScrollToTop />
-              <Toaster position="top-right" toastOptions={{
-                style: {
-                  background: 'white',
-                  color: 'black',
-                  borderRadius: '8px',
-                  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)'
-                }
-              }} />
-              <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <SearchModal />
-                <main className="flex-grow">
-                    <Suspense fallback={
-                      <div className="min-h-[60vh] flex flex-col items-center justify-center p-12">
-                        <div className="w-12 h-12 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-4"></div>
-                        <div className="text-sm font-serif text-neutral-400 tracking-widest uppercase animate-pulse">
-                          Essmey
+          <ToastProvider>
+            <AuthProvider>
+              <AppProvider>
+                <ScrollToTop />
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    style: {
+                      background: "white",
+                      color: "black",
+                      borderRadius: "8px",
+                      boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+                    },
+                  }}
+                />
+                <div className="flex flex-col min-h-screen">
+                  <Navbar />
+                  <SearchModal />
+                  <main className="flex-grow">
+                    <Suspense
+                      fallback={
+                        <div className="min-h-[60vh] flex flex-col items-center justify-center p-12">
+                          <div className="w-12 h-12 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-4"></div>
+                          <div className="text-sm font-serif text-neutral-400 tracking-widest uppercase animate-pulse">
+                            Essmey
+                          </div>
                         </div>
-                      </div>
-                    }>
+                      }
+                    >
                       <AnimatedRoutes />
-                  </Suspense>
-                </main>
-                <Footer />
-              </div>
-            </AppProvider>
-          </AuthProvider>
-        </ToastProvider>
+                    </Suspense>
+                  </main>
+                  <Footer />
+                </div>
+              </AppProvider>
+            </AuthProvider>
+          </ToastProvider>
         </ChakraProvider>
       </Router>
     </QueryClientProvider>

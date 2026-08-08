@@ -15,7 +15,8 @@ const ProductReviews = ({ productId }) => {
 
   useEffect(() => {
     // Load reviews specific to this product from localStorage
-    const loadedReviews = JSON.parse(localStorage.getItem(`reviews_${productId}`)) || [];
+    const loadedReviews =
+      JSON.parse(localStorage.getItem(`reviews_${productId}`)) || [];
     setReviews(loadedReviews);
     if (user && user.displayName) {
       setName(user.displayName);
@@ -28,7 +29,7 @@ const ProductReviews = ({ productId }) => {
       addToast?.({
         title: "Missing Rating",
         description: "Please select a star rating",
-        status: "error"
+        status: "error",
       }) || alert("Please select a star rating");
       return;
     }
@@ -36,7 +37,7 @@ const ProductReviews = ({ productId }) => {
       addToast?.({
         title: "Missing Name",
         description: "Please enter your name",
-        status: "error"
+        status: "error",
       }) || alert("Please enter your name");
       return;
     }
@@ -51,15 +52,18 @@ const ProductReviews = ({ productId }) => {
 
     const updatedReviews = [newReview, ...reviews];
     setReviews(updatedReviews);
-    localStorage.setItem(`reviews_${productId}`, JSON.stringify(updatedReviews));
+    localStorage.setItem(
+      `reviews_${productId}`,
+      JSON.stringify(updatedReviews)
+    );
 
     setRating(0);
     setReviewText("");
-    
+
     addToast?.({
       title: "Review Submitted",
       description: "Thank you for your feedback!",
-      status: "success"
+      status: "success",
     }) || alert("Review submitted successfully!");
   };
 
@@ -72,14 +76,17 @@ const ProductReviews = ({ productId }) => {
   };
 
   // Calculate average rating
-  const avgRating = reviews.length > 0 
-    ? (reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length).toFixed(1)
-    : 0;
+  const avgRating =
+    reviews.length > 0
+      ? (
+          reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length
+        ).toFixed(1)
+      : 0;
 
   return (
     <div className="mt-16 border-t pt-10">
       <h2 className="text-2xl font-serif font-bold mb-8">Customer Reviews</h2>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Left Col: Review List */}
         <div className="lg:col-span-2 order-2 lg:order-1">
@@ -94,19 +101,27 @@ const ProductReviews = ({ productId }) => {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-semibold text-lg">{review.name}</h4>
-                      <p className="text-sm text-neutral-500">{formatDate(review.date)}</p>
+                      <p className="text-sm text-neutral-500">
+                        {formatDate(review.date)}
+                      </p>
                     </div>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <StarIconSolid
                           key={star}
-                          className={`h-5 w-5 ${star <= review.rating ? "text-amber-400" : "text-neutral-200"}`}
+                          className={`h-5 w-5 ${
+                            star <= review.rating
+                              ? "text-amber-400"
+                              : "text-neutral-200"
+                          }`}
                         />
                       ))}
                     </div>
                   </div>
                   {review.text && (
-                    <p className="text-neutral-700 mt-3 leading-relaxed">{review.text}</p>
+                    <p className="text-neutral-700 mt-3 leading-relaxed">
+                      {review.text}
+                    </p>
                   )}
                 </div>
               ))}
@@ -119,25 +134,40 @@ const ProductReviews = ({ productId }) => {
           {reviews.length > 0 && (
             <div className="bg-neutral-50 p-6 rounded-lg mb-8 text-center">
               <h3 className="text-lg font-medium mb-2">Average Rating</h3>
-              <div className="text-4xl font-serif font-bold text-amber-600 mb-2">{avgRating}</div>
+              <div className="text-4xl font-serif font-bold text-amber-600 mb-2">
+                {avgRating}
+              </div>
               <div className="flex justify-center mb-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <StarIconSolid
                     key={star}
-                    className={`h-6 w-6 ${star <= Math.round(avgRating) ? "text-amber-400" : "text-neutral-200"}`}
+                    className={`h-6 w-6 ${
+                      star <= Math.round(avgRating)
+                        ? "text-amber-400"
+                        : "text-neutral-200"
+                    }`}
                   />
                 ))}
               </div>
-              <p className="text-sm text-neutral-500">Based on {reviews.length} review{reviews.length !== 1 && 's'}</p>
+              <p className="text-sm text-neutral-500">
+                Based on {reviews.length} review{reviews.length !== 1 && "s"}
+              </p>
             </div>
           )}
 
           <div className="bg-white border rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-serif font-bold mb-4">Write a Review</h3>
+            <h3 className="text-lg font-serif font-bold mb-4">
+              Write a Review
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Your Rating *</label>
-                <div className="flex gap-1" onMouseLeave={() => setHoverRating(0)}>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Your Rating *
+                </label>
+                <div
+                  className="flex gap-1"
+                  onMouseLeave={() => setHoverRating(0)}
+                >
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       type="button"
@@ -157,7 +187,9 @@ const ProductReviews = ({ productId }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Name *
+                </label>
                 <input
                   type="text"
                   value={name}
@@ -169,7 +201,9 @@ const ProductReviews = ({ productId }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Review (Optional)</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Review (Optional)
+                </label>
                 <textarea
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}

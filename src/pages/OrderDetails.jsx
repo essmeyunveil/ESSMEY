@@ -97,8 +97,10 @@ export default function OrderDetails() {
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Column - Order Summary */}
         <div className="md:w-2/3">
-          <h1 className="text-4xl font-serif font-bold mb-8 text-center md:text-left">Order Details</h1>
-          
+          <h1 className="text-4xl font-serif font-bold mb-8 text-center md:text-left">
+            Order Details
+          </h1>
+
           <div className="bg-white border rounded-lg shadow-lg p-8">
             <div className="space-y-6">
               <div className="flex justify-between items-center">
@@ -109,45 +111,51 @@ export default function OrderDetails() {
                   {order.orderId}
                 </div>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <div>
                   <span className="font-semibold">Customer Name:</span>
                 </div>
-                <div className="font-medium">
-                  {order.customerName || "N/A"}
-                </div>
+                <div className="font-medium">{order.customerName || "N/A"}</div>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <div>
                   <span className="font-semibold">Order Date:</span>
                 </div>
                 <div className="font-medium">
-                  {new Date(order.createdAt || order.placedAt).toLocaleDateString('en-IN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    weekday: 'long'
+                  {new Date(
+                    order.createdAt || order.placedAt
+                  ).toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    weekday: "long",
                   })}
                 </div>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <div>
                   <span className="font-semibold">Status:</span>
                 </div>
-                <div className={`font-medium px-4 py-1 rounded-full ${
-                  status === 'Order Confirmed' ? 'bg-green-100 text-green-800' :
-                  status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
-                  status === 'Out for Delivery Soon' ? 'bg-orange-100 text-orange-800' :
-                  status === 'Out for Delivery' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
+                <div
+                  className={`font-medium px-4 py-1 rounded-full ${
+                    status === "Order Confirmed"
+                      ? "bg-green-100 text-green-800"
+                      : status === "In Transit"
+                      ? "bg-blue-100 text-blue-800"
+                      : status === "Out for Delivery Soon"
+                      ? "bg-orange-100 text-orange-800"
+                      : status === "Out for Delivery"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-green-100 text-green-800"
+                  }`}
+                >
                   {status}
                 </div>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <div>
                   <span className="font-semibold">Total Amount:</span>
@@ -156,7 +164,7 @@ export default function OrderDetails() {
                   ₹{order.total.toFixed(2)}
                 </div>
               </div>
-              
+
               <div className="border-t pt-6">
                 <h2 className="text-2xl font-semibold mb-4">Order Items</h2>
                 <div className="space-y-4">
@@ -189,19 +197,21 @@ export default function OrderDetails() {
               </div>
             </div>
           </div>
-          
-          <button 
+
+          <button
             className="btn-secondary mt-8 w-full md:w-auto"
             onClick={() => navigate(-1)}
           >
             Back to Orders
           </button>
         </div>
-        
+
         {/* Right Column - Additional Information */}
         <div className="md:w-1/3">
           <div className="bg-white border rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4">Order Status Timeline</h2>
+            <h2 className="text-2xl font-semibold mb-4">
+              Order Status Timeline
+            </h2>
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
@@ -227,7 +237,9 @@ export default function OrderDetails() {
           </div>
 
           <div className="bg-white border rounded-lg shadow-lg p-6 mt-6">
-            <h2 className="text-2xl font-semibold mb-4">Delivery Information</h2>
+            <h2 className="text-2xl font-semibold mb-4">
+              Delivery Information
+            </h2>
             <div className="space-y-4">
               <p className="text-sm text-neutral-600">
                 Your order will be delivered within 7-10 business days.
@@ -236,7 +248,8 @@ export default function OrderDetails() {
                 We'll send you tracking updates via email and SMS.
               </p>
               <p className="text-sm text-neutral-600">
-                If you have any questions, feel free to contact our customer support.
+                If you have any questions, feel free to contact our customer
+                support.
               </p>
             </div>
           </div>
@@ -250,9 +263,7 @@ export default function OrderDetails() {
               <p className="text-sm text-neutral-600">
                 Email: support@essmey.com
               </p>
-              <p className="text-sm text-neutral-600">
-                Phone: +91 1234567890
-              </p>
+              <p className="text-sm text-neutral-600">Phone: +91 1234567890</p>
               <p className="text-sm text-neutral-600">
                 Available: Mon-Fri, 9 AM - 6 PM
               </p>

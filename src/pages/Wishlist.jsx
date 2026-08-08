@@ -6,7 +6,9 @@ import { getImageUrl } from "../utils/sanity";
 
 const Wishlist = () => {
   const wishlistItems = useWishlistStore((state) => state.items);
-  const removeFromWishlist = useWishlistStore((state) => state.removeFromWishlist);
+  const removeFromWishlist = useWishlistStore(
+    (state) => state.removeFromWishlist
+  );
   const addToCart = useCartStore((state) => state.addToCart);
 
   const handleImageError = (event) => {
@@ -26,9 +28,12 @@ const Wishlist = () => {
                   <div className="w-24 h-24 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-4">
                     <ShoppingBagIcon className="h-12 w-12 text-amber-600" />
                   </div>
-                  <h2 className="text-3xl font-serif font-bold mb-4">Your Wishlist is Empty</h2>
+                  <h2 className="text-3xl font-serif font-bold mb-4">
+                    Your Wishlist is Empty
+                  </h2>
                   <p className="text-neutral-600 mb-6">
-                    Start adding your favorite perfumes to your wishlist to keep track of them.
+                    Start adding your favorite perfumes to your wishlist to keep
+                    track of them.
                   </p>
                   <Link to="/shop" className="btn-primary">
                     Start Exploring
@@ -86,15 +91,22 @@ const Wishlist = () => {
                               <button
                                 onClick={() => addToCart(item)}
                                 className={`flex-1 btn-primary flex items-center justify-center gap-2 ${
-                                  !item.stock || item.stock < 1 ? 'opacity-50 cursor-not-allowed' : ''
+                                  !item.stock || item.stock < 1
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
                                 }`}
                                 disabled={!item.stock || item.stock < 1}
-                                title={item.stock < 1 ? 'Out of Stock' : 'Add to Cart'}
+                                title={
+                                  item.stock < 1
+                                    ? "Out of Stock"
+                                    : "Add to Cart"
+                                }
                               >
                                 <ShoppingBagIcon className="h-5 w-5" />
-                                {item.stock < 1 ? "Out of Stock" : "Add to Cart"}
+                                {item.stock < 1
+                                  ? "Out of Stock"
+                                  : "Add to Cart"}
                               </button>
-                            
                             </div>
                           </div>
                         </div>
@@ -109,17 +121,22 @@ const Wishlist = () => {
           {/* Right Column - Additional Information */}
           <div className="md:w-1/3">
             <div className="bg-white border rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-semibold mb-4">About Your Wishlist</h2>
+              <h2 className="text-2xl font-semibold mb-4">
+                About Your Wishlist
+              </h2>
               <div className="space-y-4">
                 <p className="text-sm text-neutral-600">
-                  Your wishlist helps you keep track of your favorite perfumes. You can easily add
-                  items to your cart or remove them whenever you want.
+                  Your wishlist helps you keep track of your favorite perfumes.
+                  You can easily add items to your cart or remove them whenever
+                  you want.
                 </p>
                 <p className="text-sm text-neutral-600">
-                  When items are out of stock, they'll be marked as such in your wishlist.
+                  When items are out of stock, they'll be marked as such in your
+                  wishlist.
                 </p>
                 <p className="text-sm text-neutral-600">
-                  You can also share your wishlist with friends and family using the share button.
+                  You can also share your wishlist with friends and family using
+                  the share button.
                 </p>
               </div>
             </div>
@@ -140,7 +157,8 @@ const Wishlist = () => {
                     <span className="text-amber-600">2</span>
                   </div>
                   <p className="text-sm text-neutral-600">
-                    Items in your wishlist won't be reserved - they're just for your reference.
+                    Items in your wishlist won't be reserved - they're just for
+                    your reference.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
@@ -148,7 +166,8 @@ const Wishlist = () => {
                     <span className="text-amber-600">3</span>
                   </div>
                   <p className="text-sm text-neutral-600">
-                    You can easily move items from wishlist to cart when you're ready to purchase.
+                    You can easily move items from wishlist to cart when you're
+                    ready to purchase.
                   </p>
                 </div>
               </div>
@@ -160,5 +179,5 @@ const Wishlist = () => {
   );
 };
 
-Wishlist.displayName = 'Wishlist';
+Wishlist.displayName = "Wishlist";
 export default Wishlist;

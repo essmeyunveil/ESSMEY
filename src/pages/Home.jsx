@@ -13,12 +13,18 @@ import "../utils/uiverse.css";
 const Home = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 
-  const { data: products = [], isLoading: loadingProducts, error: productsError } = useProducts();
-  const { data: testimonials = [], isLoading: loadingTestimonials } = useTestimonials();
-  
-  const featuredProducts = products?.filter((p) => p.featured).slice(0, 4) || [];
+  const {
+    data: products = [],
+    isLoading: loadingProducts,
+    error: productsError,
+  } = useProducts();
+  const { data: testimonials = [], isLoading: loadingTestimonials } =
+    useTestimonials();
+
+  const featuredProducts =
+    products?.filter((p) => p.featured).slice(0, 4) || [];
   const bestSellers = products?.filter((p) => p.bestSeller).slice(0, 4) || [];
-  
+
   const error = productsError ? "Failed to load products" : null;
 
   // Rotating testimonials if there are at least 2
@@ -88,7 +94,10 @@ const Home = () => {
                 </Link>
               </MagneticButton>
               <MagneticButton>
-                <Link to="/about" className="btn-primary w-full h-full border border-transparent">
+                <Link
+                  to="/about"
+                  className="btn-primary w-full h-full border border-transparent"
+                >
                   Our Story
                 </Link>
               </MagneticButton>
@@ -297,18 +306,29 @@ const Home = () => {
               <motion.div
                 key={testimonial._id}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: index === activeTestimonial ? 1 : 0, y: index === activeTestimonial ? 0 : 20 }}
+                animate={{
+                  opacity: index === activeTestimonial ? 1 : 0,
+                  y: index === activeTestimonial ? 0 : 20,
+                }}
                 transition={{ duration: 0.5 }}
                 className={`absolute inset-0 transition-all duration-500 ${
-                  index === activeTestimonial ? "opacity-100 z-10" : "opacity-0 z-0"
+                  index === activeTestimonial
+                    ? "opacity-100 z-10"
+                    : "opacity-0 z-0"
                 }`}
               >
                 <div className="flex flex-col items-center justify-center h-full px-4">
                   <div className="mb-6 rounded-full overflow-hidden w-20 h-20 border-2 border-amber shadow-lg bg-neutral-100 flex items-center justify-center">
                     {testimonial.imageUrl ? (
-                      <img src={testimonial.imageUrl} alt={testimonial.name} className="w-full h-full object-cover" />
+                      <img
+                        src={testimonial.imageUrl}
+                        alt={testimonial.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <span className="text-3xl font-serif text-amber uppercase">{testimonial.name ? testimonial.name.charAt(0) : "U"}</span>
+                      <span className="text-3xl font-serif text-amber uppercase">
+                        {testimonial.name ? testimonial.name.charAt(0) : "U"}
+                      </span>
                     )}
                   </div>
                   <div className="flex justify-center mb-6">
@@ -328,7 +348,9 @@ const Home = () => {
                       {testimonial.text}
                     </p>
                     <div className="flex flex-col items-center">
-                      <p className="font-medium text-neutral-900">{testimonial.name}</p>
+                      <p className="font-medium text-neutral-900">
+                        {testimonial.name}
+                      </p>
                       <p className="text-neutral-600">{testimonial.location}</p>
                     </div>
                   </div>

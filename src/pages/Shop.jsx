@@ -11,7 +11,11 @@ const Shop = () => {
   const categoryParam = searchParams.get("category");
   const { addToast } = useToastContext();
 
-  const { data: allProducts = [], isLoading: loading, error: queryError } = useProducts();
+  const {
+    data: allProducts = [],
+    isLoading: loading,
+    error: queryError,
+  } = useProducts();
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [usingSampleData, setUsingSampleData] = useState(false);
@@ -30,10 +34,10 @@ const Shop = () => {
   // Clear all filters
   const clearFilters = () => {
     setFilters({
-      category: 'all',
-      sort: 'featured',
-      minPrice: '',
-      maxPrice: '',
+      category: "all",
+      sort: "featured",
+      minPrice: "",
+      maxPrice: "",
       isNew: false,
       isBestSeller: false,
     });
@@ -43,21 +47,21 @@ const Shop = () => {
   const handleFilterChange = (e) => {
     try {
       const { name, value, type, checked } = e.target;
-      
+
       // Handle checkbox values
-      const newValue = type === 'checkbox' ? checked : value;
-      
-      setFilters(prev => ({
+      const newValue = type === "checkbox" ? checked : value;
+
+      setFilters((prev) => ({
         ...prev,
-        [name]: newValue
+        [name]: newValue,
       }));
     } catch (error) {
-      console.error('Error in filter change:', error);
-      trackError(error, 'Shop.filtering');
+      console.error("Error in filter change:", error);
+      trackError(error, "Shop.filtering");
       addToast({
-        title: 'Filter Error',
-        description: 'An error occurred while applying filters',
-        status: 'error'
+        title: "Filter Error",
+        description: "An error occurred while applying filters",
+        status: "error",
       });
     }
   };
@@ -67,15 +71,18 @@ const Shop = () => {
     try {
       // Only run filtering if we have products
       if (allProducts.length === 0) return;
-      
-      let filtered = [...allProducts].filter(product => {
+
+      let filtered = [...allProducts].filter((product) => {
         if (!product) return false;
-        
+
         // Category filter
-        if (filters.category !== "all" && product.category !== filters.category) {
+        if (
+          filters.category !== "all" &&
+          product.category !== filters.category
+        ) {
           return false;
         }
-        
+
         // Price range filter
         if (filters.minPrice && product.price < parseFloat(filters.minPrice)) {
           return false;
@@ -83,36 +90,38 @@ const Shop = () => {
         if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) {
           return false;
         }
-        
+
         // New product filter
         if (filters.isNew && !product.new) {
           return false;
         }
-        
+
         // Best seller filter
         if (filters.isBestSeller && !product.bestSeller) {
           return false;
         }
-        
+
         return true;
       });
 
       // Apply sorting
       switch (filters.sort) {
-        case 'price-low':
+        case "price-low":
           filtered.sort((a, b) => a.price - b.price);
           break;
-        case 'price-high':
+        case "price-high":
           filtered.sort((a, b) => b.price - a.price);
           break;
-        case 'featured':
+        case "featured":
           filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
           break;
-        case 'newest':
+        case "newest":
           filtered.sort((a, b) => (b.new ? 1 : 0) - (a.new ? 1 : 0));
           break;
-        case 'bestselling':
-          filtered.sort((a, b) => (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0));
+        case "bestselling":
+          filtered.sort(
+            (a, b) => (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0)
+          );
           break;
         default:
           filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -120,12 +129,12 @@ const Shop = () => {
 
       setFilteredProducts(filtered);
     } catch (error) {
-      console.error('Error in filtering/sorting:', error);
-      trackError(error, 'Shop.filtering');
+      console.error("Error in filtering/sorting:", error);
+      trackError(error, "Shop.filtering");
       addToast({
-        title: 'Filter Error',
-        description: 'An error occurred while applying filters',
-        status: 'error'
+        title: "Filter Error",
+        description: "An error occurred while applying filters",
+        status: "error",
       });
     }
   }, [filters, allProducts]);
@@ -154,19 +163,34 @@ const Shop = () => {
           </div>
         )}
         <div className="mb-8">
-          <h1 className="text-3xl font-serif font-bold mb-4">Explore Our Collection</h1>
-          <p className="text-neutral-600">Discover your signature scent from our premium handcrafted perfumes.</p>
+          <h1 className="text-3xl font-serif font-bold mb-4">
+            Explore Our Collection
+          </h1>
+          <p className="text-neutral-600">
+            Discover your signature scent from our premium handcrafted perfumes.
+          </p>
         </div>
 
         {/* Mobile Filter Toggle */}
         <div className="lg:hidden mb-6 flex gap-4">
-          <button 
+          <button
             onClick={() => setIsFilterOpen(true)}
             className="flex-1 py-3 px-4 bg-white border border-neutral-200 rounded-lg shadow-sm flex items-center justify-center gap-2 font-medium"
             aria-label="Open Filters"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m-9.75 0h9.75" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m-9.75 0h9.75"
+              />
             </svg>
             Filters & Sorting
           </button>
@@ -175,20 +199,30 @@ const Shop = () => {
         {/* Mobile Filter Drawer Overlay */}
         {isFilterOpen && (
           <div className="fixed inset-0 z-[60] lg:hidden">
-            <div className="absolute inset-0 bg-black/50" onClick={() => setIsFilterOpen(false)}></div>
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setIsFilterOpen(false)}
+            ></div>
             <div className="absolute inset-y-0 left-0 w-[280px] bg-white shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
               <div className="p-6 border-b flex justify-between items-center">
                 <h2 className="text-xl font-serif font-bold">Filters</h2>
-                <button onClick={() => setIsFilterOpen(false)} aria-label="Close Filters">
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  aria-label="Close Filters"
+                >
                   <XMarkIcon className="w-6 h-6" />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
                 {/* Reusing existing filter content */}
-                <FilterContent filters={filters} handleFilterChange={handleFilterChange} clearFilters={clearFilters} />
+                <FilterContent
+                  filters={filters}
+                  handleFilterChange={handleFilterChange}
+                  clearFilters={clearFilters}
+                />
               </div>
               <div className="p-6 border-t">
-                <button 
+                <button
                   onClick={() => setIsFilterOpen(false)}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium"
                 >
@@ -203,7 +237,11 @@ const Shop = () => {
           {/* Desktop Filters Sidebar */}
           <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-6 sticky top-24">
-               <FilterContent filters={filters} handleFilterChange={handleFilterChange} clearFilters={clearFilters} />
+              <FilterContent
+                filters={filters}
+                handleFilterChange={handleFilterChange}
+                clearFilters={clearFilters}
+              />
             </div>
           </div>
 

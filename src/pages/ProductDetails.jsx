@@ -3,8 +3,12 @@ import { useCartStore } from "../store/useCartStore";
 import { useWishlistStore } from "../store/useWishlistStore";
 import { client } from "../utils/sanity";
 import { useState, useEffect } from "react";
-import { ShoppingBagIcon, HeartIcon } from "@heroicons/react/24/outline";
-import { ShareIcon } from "@heroicons/react/24/outline";
+import {
+  ShoppingBagIcon,
+  HeartIcon,
+  ShareIcon,
+} from "@heroicons/react/24/outline";
+import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import ProductReviews from "../components/ProductReviews";
 import AnimatedScentProfile from "../components/AnimatedScentProfile";
 import ProductSkeleton from "../components/ProductSkeleton";
@@ -16,7 +20,9 @@ const ProductDetails = () => {
   const { id } = useParams();
   const addToCart = useCartStore((state) => state.addToCart);
   const addToWishlist = useWishlistStore((state) => state.addToWishlist);
-  const removeFromWishlist = useWishlistStore((state) => state.removeFromWishlist);
+  const removeFromWishlist = useWishlistStore(
+    (state) => state.removeFromWishlist
+  );
   const isInWishlist = useWishlistStore((state) => state.isInWishlist);
   const contextError = null;
   const navigate = useNavigate();
@@ -177,7 +183,9 @@ const ProductDetails = () => {
           {/* Product Info */}
           <div className="flex-1 space-y-8">
             <div>
-              <h1 className="text-3xl font-serif font-bold mb-4">{product.name}</h1>
+              <h1 className="text-3xl font-serif font-bold mb-4">
+                {product.name}
+              </h1>
               <p className="text-lg text-amber-600 font-semibold mb-6">
                 ₹{product.price?.toFixed(2)}
               </p>
@@ -214,13 +222,26 @@ const ProductDetails = () => {
                     <input
                       type="number"
                       value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock || 100, parseInt(e.target.value) || 1)))}
-                      
+                      onChange={(e) =>
+                        setQuantity(
+                          Math.max(
+                            1,
+                            Math.min(
+                              product.stock || 100,
+                              parseInt(e.target.value) || 1
+                            )
+                          )
+                        )
+                      }
                       max={product.stock || 100}
                       className="w-20 h-10 px-3 border rounded-md text-center"
                     />
                     <button
-                      onClick={() => setQuantity(Math.min(product.stock || 100, quantity + 1))}
+                      onClick={() =>
+                        setQuantity(
+                          Math.min(product.stock || 100, quantity + 1)
+                        )
+                      }
                       className="w-8 h-8 rounded-md border flex items-center justify-center hover:bg-neutral-100"
                     >
                       <span className="text-lg">+</span>
@@ -241,15 +262,15 @@ const ProductDetails = () => {
                     className="w-full bg-black text-white font-medium py-4 rounded-md hover:bg-neutral-800 transition-all duration-300 shadow-lg"
                     disabled={product.stock === 0 || quantity > product.stock}
                   >
-                    {product.stock === 0
-                      ? "Out of Stock"
-                      : "Buy It Now"}
+                    {product.stock === 0 ? "Out of Stock" : "Buy It Now"}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-6">
-                <p className="text-neutral-600 leading-relaxed">{product.description}</p>
+                <p className="text-neutral-600 leading-relaxed">
+                  {product.description}
+                </p>
 
                 {/* Animated Perfume Notes Section */}
                 <AnimatedScentProfile notes={product.notes} />
@@ -257,13 +278,12 @@ const ProductDetails = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Render Product Reviews */}
         <ProductReviews productId={product._id} />
 
         {/* AI Recommendations */}
         <AILovedSuggestions currentProduct={product} />
-
       </div>
     </div>
   );

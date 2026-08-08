@@ -17,30 +17,30 @@ function Blog() {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    client
-      .fetch(
-        `*[_type == "blogPost"] | order(publishedAt desc) {
-        _id,
-        title,
-        slug,
-        mainImage{
-          asset->{url}
-        },
-        excerpt,
-        publishedAt,
-        author,
-        categories
-      }`
-      )
-      .then((data) => {
-        setPosts(data);
-        setLoading(false);
-      })
-      .catch((e) => {
-        setError("Could not load blog posts");
-        setLoading(false);
-      });
+    fetchPosts();
   }, []);
+
+  const fetchPosts = async () => {
+    try {
+      const data = await client.fetch(
+        `*[_type == "blogPost"] | order(publishedAt desc) {
+          _id,
+          title,
+          slug,
+          mainImage{ asset->{url} },
+          excerpt,
+          publishedAt,
+          author,
+          categories
+        }`
+      );
+      setPosts(data);
+      setLoading(false);
+    } catch (e) {
+      setError("Could not load blog posts");
+      setLoading(false);
+    }
+  };
 
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

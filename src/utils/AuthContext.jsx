@@ -193,13 +193,13 @@ const AuthProvider = ({ children }) => {
       setError(null);
       setLoading(true);
       const result = await signOut(auth);
-      
+
       // Show logout success toast
       if (user) {
-        const userName = user.email.split('@')[0];
-        addToast(`${userName} has successfully been logged out`, );
+        const userName = user.email.split("@")[0];
+        addToast(`${userName} has successfully been logged out`);
       }
-      
+
       setLoading(false);
       return result;
     } catch (error) {

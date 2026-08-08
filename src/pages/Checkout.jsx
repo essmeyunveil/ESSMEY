@@ -45,7 +45,10 @@ const statesIndia = [
 const Checkout = () => {
   const cartItems = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
-  const cartSubtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const cartSubtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
   const contextError = null;
   const { user, isLoading } = useAuth();
   const { addToast } = useToastContext();
@@ -58,9 +61,9 @@ const Checkout = () => {
     if (!isLoading && !user) {
       // Save cart state to localStorage before redirecting
       try {
-        localStorage.setItem('cart', JSON.stringify(cartItems));
+        localStorage.setItem("cart", JSON.stringify(cartItems));
       } catch (error) {
-        console.error('Error saving cart state:', error);
+        console.error("Error saving cart state:", error);
       }
       navigate("/login", {
         state: {
@@ -193,25 +196,22 @@ const Checkout = () => {
 
         await client.create(orderData);
         clearCart();
-        addToast(
-          "Payment successful! Your order has been placed.",
-          "success"
-        );
-        
+        addToast("Payment successful! Your order has been placed.", "success");
+
         setTimeout(() => {
           navigate("/thank-you", { state: { orderId: customOrderId } });
         }, 500);
       };
 
       // Request a secure Order ID from the newly created Hostinger Node.js backend
-      const orderResponse = await fetch('/api/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const orderResponse = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: cartSubtotal,
           currency: "INR",
-          receipt: customOrderId
-        })
+          receipt: customOrderId,
+        }),
       });
 
       if (!orderResponse.ok) {
@@ -390,7 +390,6 @@ const Checkout = () => {
               />
             </div>
           </div>
-
 
           <button
             type="submit"

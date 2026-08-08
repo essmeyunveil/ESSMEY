@@ -5,12 +5,12 @@ const isDevelopment = process.env.NODE_ENV === "development";
 export const initToast = () => {
   toast.configure({
     style: {
-      background: '#fff',
-      color: '#333',
-      borderRadius: '8px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+      background: "#fff",
+      color: "#333",
+      borderRadius: "8px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
     },
-    position: 'top-right'
+    position: "top-right",
   });
 };
 
@@ -33,10 +33,10 @@ export const withAnalytics = (callback) => {
   try {
     const result = callback();
     const duration = performance.now() - start;
-    trackPerformance(callback.name || 'Anonymous', duration);
+    trackPerformance(callback.name || "Anonymous", duration);
     return result;
   } catch (error) {
-    trackError(error, callback.name || 'Anonymous');
+    trackError(error, callback.name || "Anonymous");
     throw error;
   }
 };

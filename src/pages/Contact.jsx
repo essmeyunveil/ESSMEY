@@ -10,10 +10,10 @@ import { client } from "../utils/sanity";
 const Contact = () => {
   const [toast, setToast] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,19 +21,19 @@ const Contact = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Form validation
     if (!formData.name || !formData.email || !formData.message) {
       setToast({
         message: "Please fill out all required fields.",
         type: "error",
-        show: true
+        show: true,
       });
       return;
     }
@@ -44,7 +44,7 @@ const Contact = () => {
       setToast({
         message: "Please enter a valid email address.",
         type: "error",
-        show: true
+        show: true,
       });
       return;
     }
@@ -58,25 +58,25 @@ const Contact = () => {
         email: formData.email,
         subject: formData.subject || "No Subject",
         message: formData.message,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
       setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: ''
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
       });
       setToast({
         message: "Message sent successfully!",
         type: "success",
-        show: true
+        show: true,
       });
     } catch (err) {
       console.error("Error submitting form:", err);
       setToast({
         message: "Failed to send message. Please try again later.",
         type: "error",
-        show: true
+        show: true,
       });
     } finally {
       setIsSubmitting(false);
@@ -94,11 +94,13 @@ const Contact = () => {
   return (
     <div className="py-16 relative">
       {toast && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-          toast.type === "success"
-            ? "bg-green-500 text-white"
-            : "bg-red-500 text-white"
-        }`}>
+        <div
+          className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+            toast.type === "success"
+              ? "bg-green-500 text-white"
+              : "bg-red-500 text-white"
+          }`}
+        >
           <p>{toast.message}</p>
         </div>
       )}
@@ -114,7 +116,9 @@ const Contact = () => {
               <div>
                 <h3 className="font-medium">Address</h3>
                 <p className="text-neutral-600 mt-1">Near PVR, Friend Colony</p>
-                <p className="text-neutral-600">Patiala, Punjab 147002, India</p>
+                <p className="text-neutral-600">
+                  Patiala, Punjab 147002, India
+                </p>
               </div>
             </div>
             <div className="flex items-start">
@@ -135,7 +139,9 @@ const Contact = () => {
               <ClockIcon className="h-8 w-8 text-amber-500 mr-4" />
               <div>
                 <h3 className="font-medium">Business Hours</h3>
-                <p className="text-neutral-600 mt-1">Mon - Fri: 9:00 AM - 6:00 PM</p>
+                <p className="text-neutral-600 mt-1">
+                  Mon - Fri: 9:00 AM - 6:00 PM
+                </p>
                 <p className="text-neutral-600">Sat: 10:00 AM - 4:00 PM</p>
                 <p className="text-neutral-600">Sun: Closed</p>
               </div>
@@ -172,7 +178,10 @@ const Contact = () => {
               />
             </div>
             <div>
-              <label htmlFor="subject" className="block text-sm font-medium mb-1">
+              <label
+                htmlFor="subject"
+                className="block text-sm font-medium mb-1"
+              >
                 Subject
               </label>
               <input
@@ -185,7 +194,10 @@ const Contact = () => {
               />
             </div>
             <div>
-              <label htmlFor="message" className="block text-sm font-medium mb-1">
+              <label
+                htmlFor="message"
+                className="block text-sm font-medium mb-1"
+              >
                 Message
               </label>
               <textarea

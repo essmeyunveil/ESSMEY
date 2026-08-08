@@ -19,7 +19,10 @@ const Login = () => {
   useEffect(() => {
     const fromCheckout = location.state?.from === "/checkout";
     if (fromCheckout) {
-      addToast(location.state.message || "Please login to proceed with checkout", "info");
+      addToast(
+        location.state.message || "Please login to proceed with checkout",
+        "info"
+      );
     }
   }, [location.state, addToast]);
 
@@ -42,10 +45,10 @@ const Login = () => {
       if (isLogin) {
         const result = await login(email, password);
         const user = result.user;
-        
+
         // Get user's name from email (before @ symbol)
-        const userName = email.split('@')[0];
-        
+        const userName = email.split("@")[0];
+
         // Show success toast
         addToast(`${userName} has successfully logged in`, "success");
       } else {
@@ -57,7 +60,7 @@ const Login = () => {
       const fromPath = location.state?.from || "/account";
       navigate(fromPath);
     } catch (err) {
-      const userName = email.split('@')[0] || "User";
+      const userName = email.split("@")[0] || "User";
       addToast(
         isLogin
           ? `${userName} failed to login. Please check your credentials.`
@@ -89,7 +92,7 @@ const Login = () => {
         <h1 className="text-3xl font-semibold mb-8 text-center text-amber-600">
           {isLogin ? "Login" : "Sign Up"}
         </h1>
-        
+
         <div className="mb-5">
           <label
             htmlFor="email"
@@ -153,10 +156,10 @@ const Login = () => {
               ? "Logging in..."
               : "Signing up..."
             : isLogin
-              ? "Login"
-              : "Sign Up"}
+            ? "Login"
+            : "Sign Up"}
         </button>
-        
+
         <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
           {isLogin && (
             <Link

@@ -5,7 +5,7 @@ import {
   Link,
   useNavigate,
   useLocation,
-  useParams
+  useParams,
 } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProducts } from "../features/products/useProducts";
@@ -92,14 +92,18 @@ const ProductsList = () => {
   }, [searchTerm, realProducts]);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to permanently delete this product?")) {
-       try {
-         await client.delete(id);
-         queryClient.invalidateQueries({ queryKey: ["products"] });
-         toast.success("Product deleted successfully");
-       } catch(error) {
-         toast.error("Failed to delete product");
-       }
+    if (
+      window.confirm(
+        "Are you sure you want to permanently delete this product?"
+      )
+    ) {
+      try {
+        await client.delete(id);
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        toast.success("Product deleted successfully");
+      } catch (error) {
+        toast.error("Failed to delete product");
+      }
     }
   };
 
@@ -144,7 +148,9 @@ const ProductsList = () => {
           <tbody>
             {filteredProducts.map((product) => (
               <tr key={product._id} className="hover:bg-neutral-50">
-                <td className="border border-neutral-200 p-3 text-neutral-500">{product._id.slice(-6)}</td>
+                <td className="border border-neutral-200 p-3 text-neutral-500">
+                  {product._id.slice(-6)}
+                </td>
                 <td className="border border-neutral-200 p-3">
                   <div className="w-12 h-12 bg-neutral-100 overflow-hidden rounded">
                     <img
@@ -172,13 +178,15 @@ const ProductsList = () => {
                 </td>
                 <td className="border border-neutral-200 p-3">
                   <div className="flex space-x-4">
-                    <button 
-                      onClick={() => navigate(`/admin/products/edit/${product._id}`)} 
+                    <button
+                      onClick={() =>
+                        navigate(`/admin/products/edit/${product._id}`)
+                      }
                       className="text-amber hover:text-amber/80 font-medium transition"
                     >
                       Edit
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(product._id)}
                       className="text-red-600 hover:text-red-800 font-medium transition"
                     >
@@ -258,10 +266,10 @@ const NewProduct = () => {
     setLoading(true);
     try {
       // 1. Upload image to Sanity
-      const imageAsset = await client.assets.upload('image', imageFile, {
-        filename: imageFile.name
+      const imageAsset = await client.assets.upload("image", imageFile, {
+        filename: imageFile.name,
       });
-      
+
       // 2. Create product with the newly uploaded image
       await client.create({
         _type: "product",
@@ -276,22 +284,22 @@ const NewProduct = () => {
         image: imageAsset.url,
         images: [
           {
-            _type: 'image',
+            _type: "image",
             asset: {
               _type: "reference",
-              _ref: imageAsset._id
-            }
-          }
-        ]
+              _ref: imageAsset._id,
+            },
+          },
+        ],
       });
-      
+
       // Invalidate React Query cache so the new product shows up instantly on the live website
       queryClient.invalidateQueries({ queryKey: ["products"] });
 
       // Reset form on success
       alert("Product created successfully! It is now live on the website.");
       setImageFile(null);
-      const fileInput = document.getElementById('productImage');
+      const fileInput = document.getElementById("productImage");
       if (fileInput) fileInput.value = "";
       setFormData({
         name: "",
@@ -431,7 +439,8 @@ const NewProduct = () => {
             className="w-full border border-neutral-300 p-3 focus:border-black outline-none bg-neutral-50"
           />
           <p className="text-xs text-neutral-500 mt-1">
-            Snap a photo directly from your mobile camera to upload to your store.
+            Snap a photo directly from your mobile camera to upload to your
+            store.
           </p>
         </div>
 
@@ -537,11 +546,18 @@ const EditProduct = () => {
       };
 
       if (imageFile) {
-        const imageAsset = await client.assets.upload('image', imageFile, { filename: imageFile.name });
+        const imageAsset = await client.assets.upload("image", imageFile, {
+          filename: imageFile.name,
+        });
         updatePayload.image = imageAsset.url;
-        updatePayload.images = [{ _type: 'image', asset: { _type: "reference", _ref: imageAsset._id } }];
+        updatePayload.images = [
+          {
+            _type: "image",
+            asset: { _type: "reference", _ref: imageAsset._id },
+          },
+        ];
       }
-      
+
       await client.patch(id).set(updatePayload).commit();
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Product updated successfully!");
@@ -560,33 +576,129 @@ const EditProduct = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-serif font-medium">Edit Product</h2>
-        <button onClick={() => navigate("/admin/products")} className="text-neutral-600 hover:text-neutral-900">Cancel</button>
+        <button
+          onClick={() => navigate("/admin/products")}
+          className="text-neutral-600 hover:text-neutral-900"
+        >
+          Cancel
+        </button>
       </div>
-      <form onSubmit={handleSubmit} className="bg-white p-6 border border-neutral-200">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 border border-neutral-200"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div><label className="block text-sm font-medium mb-2">Name</label><input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border border-neutral-300 p-3 focus:border-black outline-none" required /></div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full border border-neutral-300 p-3 focus:border-black outline-none"
+              required
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium mb-2">Category</label>
-            <select name="category" value={formData.category} onChange={handleChange} className="w-full border border-neutral-300 p-3 focus:border-black outline-none" required>
-              <option value="women">Women</option><option value="men">Men</option><option value="unisex">Unisex</option>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="w-full border border-neutral-300 p-3 focus:border-black outline-none"
+              required
+            >
+              <option value="women">Women</option>
+              <option value="men">Men</option>
+              <option value="unisex">Unisex</option>
             </select>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div><label className="block text-sm font-medium mb-2">Price</label><input type="number" name="price" value={formData.price} onChange={handleChange} step="0.01" className="w-full border border-neutral-300 p-3" required /></div>
-          <div><label className="block text-sm font-medium mb-2">Stock</label><input type="number" name="stock" value={formData.stock} onChange={handleChange} className="w-full border border-neutral-300 p-3" required /></div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Price</label>
+            <input
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              step="0.01"
+              className="w-full border border-neutral-300 p-3"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Stock</label>
+            <input
+              type="number"
+              name="stock"
+              value={formData.stock}
+              onChange={handleChange}
+              className="w-full border border-neutral-300 p-3"
+              required
+            />
+          </div>
         </div>
-        <div className="mb-6"><label className="block text-sm font-medium mb-2">Description</label><textarea name="description" value={formData.description} onChange={handleChange} rows="4" className="w-full border border-neutral-300 p-3" required></textarea></div>
-        <div className="mb-6"><label className="block text-sm font-medium mb-2">New Image (Optional)</label><input type="file" accept="image/*" onChange={handleImageChange} className="w-full border border-neutral-300 p-3 bg-neutral-50" /></div>
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2">Description</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            rows="4"
+            className="w-full border border-neutral-300 p-3"
+            required
+          ></textarea>
+        </div>
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2">
+            New Image (Optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="w-full border border-neutral-300 p-3 bg-neutral-50"
+          />
+        </div>
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">Features</label>
           <div className="space-y-2">
-            <label className="flex items-center"><input type="checkbox" name="featured" checked={formData.featured} onChange={handleChange} className="mr-2" /> Featured Product</label>
-            <label className="flex items-center"><input type="checkbox" name="bestSeller" checked={formData.bestSeller} onChange={handleChange} className="mr-2" /> Best Seller</label>
-            <label className="flex items-center"><input type="checkbox" name="new" checked={formData.new} onChange={handleChange} className="mr-2" /> New Arrival</label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name="featured"
+                checked={formData.featured}
+                onChange={handleChange}
+                className="mr-2"
+              />{" "}
+              Featured Product
+            </label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name="bestSeller"
+                checked={formData.bestSeller}
+                onChange={handleChange}
+                className="mr-2"
+              />{" "}
+              Best Seller
+            </label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                name="new"
+                checked={formData.new}
+                onChange={handleChange}
+                className="mr-2"
+              />{" "}
+              New Arrival
+            </label>
           </div>
         </div>
-        <button type="submit" className="btn-primary" disabled={loading}>{loading ? "Saving..." : "Update Product"}</button>
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading ? "Saving..." : "Update Product"}
+        </button>
       </form>
     </div>
   );
@@ -600,37 +712,52 @@ const Stats = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-serif font-medium mb-6">Revenue Analytics</h2>
+      <h2 className="text-2xl font-serif font-medium mb-6">
+        Revenue Analytics
+      </h2>
 
       <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg mb-8">
-        <h3 className="text-lg font-medium text-neutral-800 mb-6">Revenue Over Time (Projected)</h3>
+        <h3 className="text-lg font-medium text-neutral-800 mb-6">
+          Revenue Over Time (Projected)
+        </h3>
         <div className="flex items-end space-x-4 h-64 border-b border-neutral-200 pb-2">
           {revenue.map((amount, idx) => (
-            <div key={idx} className="flex-1 flex flex-col items-center group relative">
+            <div
+              key={idx}
+              className="flex-1 flex flex-col items-center group relative"
+            >
               <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-xs py-1 px-2 rounded">
                 ${amount}
               </div>
-              <div 
-                className="w-full bg-amber/80 hover:bg-amber transition-all duration-300 rounded-t-sm" 
+              <div
+                className="w-full bg-amber/80 hover:bg-amber transition-all duration-300 rounded-t-sm"
                 style={{ height: `${(amount / maxRev) * 100}%` }}
               ></div>
-              <span className="text-xs text-neutral-500 mt-2">{months[idx]}</span>
+              <span className="text-xs text-neutral-500 mt-2">
+                {months[idx]}
+              </span>
             </div>
           ))}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-         <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg">
-            <h3 className="text-lg font-medium text-neutral-800 mb-2">Top Performing Category</h3>
-            <p className="text-4xl font-serif text-amber">Women's Premium</p>
-            <p className="text-sm text-neutral-500 mt-2">+24% vs last month</p>
-         </div>
-         <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg">
-            <h3 className="text-lg font-medium text-neutral-800 mb-2">Customer Retention</h3>
-            <p className="text-4xl font-serif text-amber">68%</p>
-            <p className="text-sm text-neutral-500 mt-2">Highly engaged user base</p>
-         </div>
+        <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg">
+          <h3 className="text-lg font-medium text-neutral-800 mb-2">
+            Top Performing Category
+          </h3>
+          <p className="text-4xl font-serif text-amber">Women's Premium</p>
+          <p className="text-sm text-neutral-500 mt-2">+24% vs last month</p>
+        </div>
+        <div className="bg-white p-6 border border-neutral-200 shadow-sm rounded-lg">
+          <h3 className="text-lg font-medium text-neutral-800 mb-2">
+            Customer Retention
+          </h3>
+          <p className="text-4xl font-serif text-amber">68%</p>
+          <p className="text-sm text-neutral-500 mt-2">
+            Highly engaged user base
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { client } from '../../utils/sanity';
+import { useQuery } from "@tanstack/react-query";
+import { client } from "../../utils/sanity";
 
 export const useProducts = () => {
   return useQuery({
-    queryKey: ['products'],
+    queryKey: ["products"],
     queryFn: async () => {
       try {
         const data = await client.fetch(
@@ -34,23 +34,23 @@ export const useProducts = () => {
 
         // Strict Remote Enforcement: No local fallback Data
 
-        return data.map(product => ({
+        return data.map((product) => ({
           ...product,
-          images: product.images?.map(image => ({
-            ...image,
-            asset: {
-              _ref: image.asset?._id,
-              _type: "image",
-              url: image.asset?.url
-            }
-          })) || [],
+          images:
+            product.images?.map((image) => ({
+              ...image,
+              asset: {
+                _ref: image.asset?._id,
+                _type: "image",
+                url: image.asset?.url,
+              },
+            })) || [],
           featured: product.featured || false,
           bestSeller: product.bestSeller || false,
           new: product.new || false,
           price: product.price || 0,
-          stock: product.stock || 0
+          stock: product.stock || 0,
         }));
-
       } catch (error) {
         console.error("Sanity fetch failed:", error);
         return [];

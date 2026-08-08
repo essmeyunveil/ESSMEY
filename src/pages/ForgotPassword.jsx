@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useAuth } from "../utils/AuthContext";
 import { useNavigate } from "react-router-dom";
-// import { useToast } from "../utils/ToastContext";
+import { useToastContext } from "../utils/ToastContext";
 
 const ForgotPassword = () => {
   const { forgotPassword } = useAuth();
-  const { addToast } = useToast();
+  const { addToast } = useToastContext();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");

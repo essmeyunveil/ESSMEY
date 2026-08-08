@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBagIcon, HeartIcon, CheckIcon } from "@heroicons/react/24/outline";
+import {
+  ShoppingBagIcon,
+  HeartIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useCartStore } from "../store/useCartStore";
 import { useWishlistStore } from "../store/useWishlistStore";
 import { getImageUrl } from "../utils/sanity";
+import { trackError } from "../utils/analytics";
 
 const FALLBACK_IMAGE = "/images/product-1.jpg";
 
@@ -15,12 +20,17 @@ const ProductCard = ({ product }) => {
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const addToCart = useCartStore((state) => state.addToCart);
   const addToWishlist = useWishlistStore((state) => state.addToWishlist);
-  const removeFromWishlist = useWishlistStore((state) => state.removeFromWishlist);
+  const removeFromWishlist = useWishlistStore(
+    (state) => state.removeFromWishlist
+  );
   const isInWishlist = useWishlistStore((state) => state.isInWishlist);
   const contextError = null;
 
   if (!product || !product._id) {
-    trackError(new Error("Invalid product data provided to ProductCard"), "ProductCard");
+    trackError(
+      new Error("Invalid product data provided to ProductCard"),
+      "ProductCard"
+    );
     return null;
   }
 
@@ -52,9 +62,10 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const mainImage = product.images && product.images.length > 0 
-    ? getImageUrl(product.images[0]) || FALLBACK_IMAGE
-    : FALLBACK_IMAGE;
+  const mainImage =
+    product.images && product.images.length > 0
+      ? getImageUrl(product.images[0]) || FALLBACK_IMAGE
+      : FALLBACK_IMAGE;
 
   const handleImageError = (e) => {
     console.error("Error loading product image:", e);

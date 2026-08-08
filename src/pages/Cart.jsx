@@ -1,9 +1,14 @@
 import { useCartStore } from "../store/useCartStore";
 import { Link, useNavigate } from "react-router-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { ShoppingBagIcon, SparklesIcon, ArrowTrendingUpIcon, TagIcon } from "@heroicons/react/24/outline";
+import {
+  ShoppingBagIcon,
+  SparklesIcon,
+  ArrowTrendingUpIcon,
+  TagIcon,
+} from "@heroicons/react/24/outline";
 import { getImageUrl } from "../utils/sanity";
-             
+
 const FALLBACK_IMAGE = "/images/product-1.jpg";
 
 const Cart = () => {
@@ -11,13 +16,18 @@ const Cart = () => {
   const removeFromCart = useCartStore((state) => state.removeFromCart);
   const updateCartQuantity = useCartStore((state) => state.updateCartQuantity);
   const clearCart = useCartStore((state) => state.clearCart);
-  const cartSubtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const cartSubtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
   const navigate = useNavigate();
 
   return (
     <div className="pt-24 pb-16 min-h-[50vh]">
       <div className="container-custom">
-        <h1 className="text-3xl font-serif font-bold mb-8">Your Shopping Cart | Essmey Handcrafted Perfumes</h1>
+        <h1 className="text-3xl font-serif font-bold mb-8">
+          Your Shopping Cart | Essmey Handcrafted Perfumes
+        </h1>
         {!cartItems || cartItems.length === 0 ? (
           <div className="text-center mt-16 space-y-12">
             <div className="space-y-8">
@@ -29,8 +39,8 @@ const Cart = () => {
                   Your Cart is Empty
                 </h2>
                 <p className="text-neutral-500 max-w-md mx-auto">
-                  Your shopping cart is currently empty. Start adding some items to
-                  your cart and make your shopping experience more enjoyable.
+                  Your shopping cart is currently empty. Start adding some items
+                  to your cart and make your shopping experience more enjoyable.
                 </p>
               </div>
 
@@ -43,12 +53,19 @@ const Cart = () => {
                   {/* Best Sellers Card */}
                   <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium text-neutral-600">Best Sellers</h3>
+                      <h3 className="text-lg font-medium text-neutral-600">
+                        Best Sellers
+                      </h3>
                       <SparklesIcon className="h-5 w-5 text-amber-500" />
                     </div>
                     <div className="space-y-2">
-                      <p className="text-neutral-500">Discover our most loved fragrances</p>
-                      <Link to="/shop?category=best-sellers" className="text-sm text-amber-500 hover:text-amber-600">
+                      <p className="text-neutral-500">
+                        Discover our most loved fragrances
+                      </p>
+                      <Link
+                        to="/shop?category=best-sellers"
+                        className="text-sm text-amber-500 hover:text-amber-600"
+                      >
                         View Collection
                       </Link>
                     </div>
@@ -57,12 +74,19 @@ const Cart = () => {
                   {/* New Arrivals Card */}
                   <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium text-neutral-600">New Arrivals</h3>
+                      <h3 className="text-lg font-medium text-neutral-600">
+                        New Arrivals
+                      </h3>
                       <ArrowTrendingUpIcon className="h-5 w-5 text-amber-500" />
                     </div>
                     <div className="space-y-2">
-                      <p className="text-neutral-500">Fresh scents just arrived</p>
-                      <Link to="/shop?new=true" className="text-sm text-amber-500 hover:text-amber-600">
+                      <p className="text-neutral-500">
+                        Fresh scents just arrived
+                      </p>
+                      <Link
+                        to="/shop?new=true"
+                        className="text-sm text-amber-500 hover:text-amber-600"
+                      >
                         Explore Now
                       </Link>
                     </div>
@@ -71,12 +95,17 @@ const Cart = () => {
                   {/* Sale Items Card */}
                   <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium text-neutral-600">Special Offers</h3>
+                      <h3 className="text-lg font-medium text-neutral-600">
+                        Special Offers
+                      </h3>
                       <TagIcon className="h-5 w-5 text-amber-500" />
                     </div>
                     <div className="space-y-2">
                       <p className="text-neutral-500">Limited time deals</p>
-                      <Link to="/shop?price=discounted" className="text-sm text-amber-500 hover:text-amber-600">
+                      <Link
+                        to="/shop?price=discounted"
+                        className="text-sm text-amber-500 hover:text-amber-600"
+                      >
                         Shop Now
                       </Link>
                     </div>
@@ -147,7 +176,13 @@ const Cart = () => {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => updateCartQuantity(item._id, Math.max(1, item.quantity - 1), item.selectedSize)}
+                                onClick={() =>
+                                  updateCartQuantity(
+                                    item._id,
+                                    Math.max(1, item.quantity - 1),
+                                    item.selectedSize
+                                  )
+                                }
                                 className="w-8 h-8 rounded-md border flex items-center justify-center hover:bg-neutral-100"
                               >
                                 <span className="text-lg">-</span>
@@ -155,12 +190,27 @@ const Cart = () => {
                               <input
                                 type="number"
                                 value={item.quantity}
-                                onChange={(e) => updateCartQuantity(item._id, Math.max(1, parseInt(e.target.value) || 1), item.selectedSize)}
+                                onChange={(e) =>
+                                  updateCartQuantity(
+                                    item._id,
+                                    Math.max(1, parseInt(e.target.value) || 1),
+                                    item.selectedSize
+                                  )
+                                }
                                 min="1"
                                 className="w-20 h-10 px-3 border rounded-md text-center"
                               />
                               <button
-                                onClick={() => updateCartQuantity(item._id, Math.min(item.stock || 100, item.quantity + 1), item.selectedSize)}
+                                onClick={() =>
+                                  updateCartQuantity(
+                                    item._id,
+                                    Math.min(
+                                      item.stock || 100,
+                                      item.quantity + 1
+                                    ),
+                                    item.selectedSize
+                                  )
+                                }
                                 className="w-8 h-8 rounded-md border flex items-center justify-center hover:bg-neutral-100"
                               >
                                 <span className="text-lg">+</span>
