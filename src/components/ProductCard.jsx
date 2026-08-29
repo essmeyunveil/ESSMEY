@@ -63,9 +63,10 @@ const ProductCard = ({ product }) => {
   };
 
   const mainImage =
-    product.images && product.images.length > 0
-      ? getImageUrl(product.images[0]) || FALLBACK_IMAGE
-      : FALLBACK_IMAGE;
+    (product.images && product.images.length > 0 && getImageUrl(product.images[0])) ||
+    product.image ||
+    product.thumbnail ||
+    FALLBACK_IMAGE;
   const saving = Number(product.mrp) > Number(product.price)
     ? Math.round(((Number(product.mrp) - Number(product.price)) / Number(product.mrp)) * 100)
     : 0;

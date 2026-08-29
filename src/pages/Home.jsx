@@ -16,10 +16,10 @@ export default function Home() {
   const { data: products = [], isLoading } = useProducts();
   const { data: testimonials = [] } = useTestimonials();
   const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const featured = products.filter((product) => product.featured).slice(0, 4);
-  const bestSellers = products.filter((product) => product.bestSeller).slice(0, 4);
-  const editorialProducts = featured.length ? featured : products.slice(0, 4);
-  const lovedProducts = bestSellers.length ? bestSellers : products.slice(0, 4);
+  const featured = products.filter((product) => product.featured);
+  const bestSellers = products.filter((product) => product.bestSeller);
+  const editorialProducts = products.length ? products.slice(0, 8) : [];
+  const lovedProducts = bestSellers.length ? bestSellers.slice(0, 4) : products.slice(0, 4);
   const testimonial = testimonials[activeTestimonial];
 
   useEffect(() => {
