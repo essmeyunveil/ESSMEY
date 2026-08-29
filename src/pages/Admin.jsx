@@ -1180,8 +1180,8 @@ const AdminLogin = ({ onLoginSuccess }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || "admin@essmey.com").toLowerCase().trim();
-  const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "EssmeyAdmin@2026";
+  const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || "essmeyunveil@gmail.com").toLowerCase().trim();
+  const ADMIN_PASSWORD = (import.meta.env.VITE_ADMIN_PASSWORD || "EssmeyAdmin@2026").trim();
 
   const handleAdminAuth = (e) => {
     e.preventDefault();
@@ -1191,11 +1191,10 @@ const AdminLogin = ({ onLoginSuccess }) => {
     const inputEmail = email.toLowerCase().trim();
     const inputPass = password.trim();
 
-    // Validate admin credentials
-    if (
-      (inputEmail === ADMIN_EMAIL || inputEmail === "essmeyunveil@gmail.com" || inputEmail === "admin") &&
-      (inputPass === ADMIN_PASSWORD || inputPass === "Essmey@2026" || inputPass === "admin123")
-    ) {
+    const allowedEmails = ADMIN_EMAIL.split(",").map((s) => s.trim().toLowerCase());
+
+    // Validate admin credentials strictly
+    if (allowedEmails.includes(inputEmail) && inputPass === ADMIN_PASSWORD) {
       localStorage.setItem("essmey_admin_session", "true");
       localStorage.setItem("essmey_admin_user", inputEmail);
       toast.success("Welcome to Essmey Admin Portal");
