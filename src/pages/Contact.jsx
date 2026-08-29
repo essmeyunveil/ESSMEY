@@ -5,7 +5,8 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useEffect } from "react";
-import { client } from "../utils/sanity";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../utils/firebase";
 
 const Contact = () => {
   const [toast, setToast] = useState(null);
@@ -52,8 +53,23 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      await client.create({
-        _type: "contact",
+      if (db.__isMock) {
+        setToast({
+          message: "Message sent successfully (Mock Mode)!",
+          type: "success",
+          show: true,
+        });
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      await addDoc(collection(db, "contactmessages"), {
         name: formData.name,
         email: formData.email,
         subject: formData.subject || "No Subject",

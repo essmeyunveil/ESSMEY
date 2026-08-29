@@ -4,83 +4,82 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from "react";
-import { useToastContext } from "../utils/ToastContext";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  signInWithPopup,
-  GoogleAuthProvider,
-  sendPasswordResetEmail,
-} from "firebase/auth";
-import { auth, handleAuthError } from "./firebase";
-import { client } from "./sanity";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { useUser, useAuth as useClerkAuth, useClerk } from "@clerk/clerk-react";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { db } from "./firebase";
+import { useToastContext } from "./ToastContext";
+import toast from "react-hot-toast";
 
-const logError = (error, context) => {
-  console.error(`[Auth Error] ${context}:`, error);
-  // In production, you would send this to your error tracking service
-  if (process.env.NODE_ENV === "production") {
-    // Example: sendToErrorTracking(error, context);
-  }
-};
+const AuthContext = createContext(null);
 
-const AuthContext = createContext();
+export const AuthProvider = ({ children }) => {
+  const { isLoaded: isUserLoaded, isSignedIn, user: clerkUser } = useUser();
+  const { isLoaded: isAuthLoaded } = useClerkAuth();
+  const clerk = useClerk();
+  const { addToast } = useToastContext() || {};
 
-const AuthProvider = ({ children }) => {
-  const { addToast } = useToastContext();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [cartSynced, setCartSynced] = useState(false);
 
+  // Map Clerk user object to the application's user interface
+  const user = useMemo(() => {
+    if (!isSignedIn || !clerkUser) return null;
+
+    const email = clerkUser.primaryEmailAddress?.emailAddress || "";
+    const displayName =
+      clerkUser.fullName ||
+      clerkUser.firstName ||
+      clerkUser.username ||
+      (email ? email.split("@")[0] : "Customer");
+
+    return {
+      uid: clerkUser.id,
+      id: clerkUser.id,
+      email,
+      displayName,
+      firstName: clerkUser.firstName || "",
+      lastName: clerkUser.lastName || "",
+      imageUrl: clerkUser.imageUrl,
+      photoURL: clerkUser.imageUrl,
+      clerkUser,
+    };
+  }, [isSignedIn, clerkUser]);
+
+  const loading = !isUserLoaded || !isAuthLoaded;
+
+  // Sync guest cart with user Firestore cart on login
   const syncCart = useCallback(
     async (currentUser) => {
-      if (!currentUser || cartSynced) return;
+      if (!currentUser || cartSynced || db.__isMock) return;
 
       try {
-        // Get cart from localStorage
         const savedCart = JSON.parse(localStorage.getItem("cart")) || [];
+        const cartDocRef = doc(db, "userCarts", currentUser.uid);
+        const cartDocSnap = await getDoc(cartDocRef);
 
-        // Get user's cart from Sanity
-        const sanityCart = await client.fetch(
-          `*[_type == "userCart" && userId == $userId][0]`,
-          { userId: currentUser.uid }
-        );
+        if (cartDocSnap.exists()) {
+          const dbCartData = cartDocSnap.data();
+          const mergedCart = [...(dbCartData.items || [])];
 
-        if (sanityCart) {
-          // Merge carts - prioritize items from Sanity
-          const mergedCart = [...sanityCart.items];
-
-          // Add items from localStorage that aren't in Sanity cart
           savedCart.forEach((localItem) => {
             const exists = mergedCart.some(
-              (sanityItem) =>
-                sanityItem._id === localItem._id &&
-                sanityItem.selectedSize === localItem.selectedSize
+              (dbItem) =>
+                dbItem._id === localItem._id &&
+                dbItem.selectedSize === localItem.selectedSize
             );
             if (!exists) {
               mergedCart.push(localItem);
             }
           });
 
-          // Update localStorage with merged cart
           localStorage.setItem("cart", JSON.stringify(mergedCart));
-
-          // Update Sanity with merged cart
-          await client
-            .patch(sanityCart._id)
-            .set({
-              items: mergedCart,
-              lastUpdated: new Date().toISOString(),
-            })
-            .commit();
+          await updateDoc(cartDocRef, {
+            items: mergedCart,
+            lastUpdated: new Date().toISOString(),
+          });
         } else if (savedCart.length > 0) {
-          // If no Sanity cart exists but there's a local cart, create one
-          await client.create({
-            _type: "userCart",
+          await setDoc(cartDocRef, {
             userId: currentUser.uid,
             items: savedCart,
             lastUpdated: new Date().toISOString(),
@@ -89,150 +88,50 @@ const AuthProvider = ({ children }) => {
 
         setCartSynced(true);
       } catch (error) {
-        logError(error, "Cart sync");
+        console.error("[Cart Sync Error]:", error);
       }
     },
     [cartSynced]
   );
 
-  // Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (currentUser) => {
-        setUser(currentUser);
-        setLoading(false);
-        setError(null);
-        await syncCart(currentUser);
-      },
-      (error) => {
-        logError(error, "Auth state change");
-        setError(handleAuthError(error));
-        setLoading(false);
+    if (user?.uid) {
+      syncCart(user);
+    } else {
+      setCartSynced(false);
+    }
+  }, [user, syncCart]);
+
+  // Sign out method
+  const logout = useCallback(async () => {
+    try {
+      await clerk.signOut();
+      if (addToast) {
+        addToast("You have been signed out successfully.", "info");
+      } else {
+        toast.success("You have been signed out successfully.");
       }
-    );
-    return () => unsubscribe();
-  }, [syncCart]);
-
-  // Login function
-  const login = async (email, password) => {
-    try {
-      setError(null);
-      setLoading(true);
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      setLoading(false);
-      return result;
-    } catch (error) {
-      logError(error, "Login");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
+    } catch (err) {
+      console.error("[Clerk Logout Error]:", err);
+      toast.error("Failed to sign out. Please try again.");
     }
-  };
+  }, [clerk, addToast]);
 
-  // Signup function
-  const signup = async (email, password) => {
-    try {
-      setError(null);
-      setLoading(true);
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      setLoading(false);
-      return result;
-    } catch (error) {
-      logError(error, "Signup");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
-  // Google login function
-  const googleLogin = async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      setLoading(false);
-      return result;
-    } catch (error) {
-      logError(error, "Google login");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
-  // Forgot password function
-  const forgotPassword = async (email) => {
-    try {
-      setError(null);
-      setLoading(true);
-      const result = await sendPasswordResetEmail(auth, email);
-      setLoading(false);
-      return result;
-    } catch (error) {
-      logError(error, "Password reset");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
-  // Logout function
-  const logout = async () => {
-    try {
-      setError(null);
-      setLoading(true);
-      const result = await signOut(auth);
-
-      // Show logout success toast
-      if (user) {
-        const userName = user.email.split("@")[0];
-        addToast(`${userName} has successfully been logged out`);
-      }
-
-      setLoading(false);
-      return result;
-    } catch (error) {
-      logError(error, "Logout");
-      const errorMessage = handleAuthError(error);
-      setError(errorMessage);
-      setLoading(false);
-      throw new Error(errorMessage);
-    }
-  };
-
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    signup,
-    googleLogin,
-    forgotPassword,
-    logout,
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      loading,
+      logout,
+      clerk,
+    }),
+    [user, loading, logout, clerk]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-const useAuth = () => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
@@ -240,4 +139,3 @@ const useAuth = () => {
   return context;
 };
 
-export { AuthProvider, useAuth };

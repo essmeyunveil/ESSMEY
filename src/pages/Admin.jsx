@@ -11,7 +11,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useProducts } from "../features/products/useProducts";
 import toast from "react-hot-toast";
 import { useAuth } from "../utils/AuthContext";
-import { client, getImageUrl } from "../utils/sanity";
+import { getImageUrl } from "../utils/sanity";
+import Migrate from "./Migrate";
+import { db, storage } from "../utils/firebase";
+import { doc, setDoc, addDoc, collection, updateDoc, deleteDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // Dashboard Component
 const Dashboard = () => {
@@ -46,7 +50,7 @@ const Dashboard = () => {
 
         <div className="bg-white p-6 border border-neutral-200 shadow-sm">
           <div className="text-neutral-500 mb-2">Total Revenue</div>
-          <div className="text-3xl font-medium">$0.00</div>
+          <div className="text-3xl font-medium">₹0.00</div>
           <div className="mt-4 text-sm">
             <Link to="/admin/stats" className="text-blue-600 hover:underline">
               View stats →
@@ -98,7 +102,18 @@ const ProductsList = () => {
       )
     ) {
       try {
-        await client.delete(id);
+        if (db.__isMock) {
+          const localSaved = localStorage.getItem("essmey_mock_products_v2");
+          if (localSaved) {
+            const list = JSON.parse(localSaved);
+            const updated = list.filter((p) => p._id !== id);
+            localStorage.setItem("essmey_mock_products_v2", JSON.stringify(updated));
+          }
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+          toast.success("Product deleted successfully (Local Mock Mode)");
+          return;
+        }
+        await deleteDoc(doc(db, "products", id));
         queryClient.invalidateQueries({ queryKey: ["products"] });
         toast.success("Product deleted successfully");
       } catch (error) {
@@ -171,7 +186,7 @@ const ProductsList = () => {
                   {product.category}
                 </td>
                 <td className="border border-neutral-200 p-3 text-neutral-600">
-                  ${product.price?.toFixed(2)}
+                  ₹{product.price?.toFixed(2)}
                 </td>
                 <td className="border border-neutral-200 p-3 text-neutral-600">
                   {product.stock}
@@ -211,16 +226,84 @@ const ProductsList = () => {
 
 // Orders List Component
 const OrdersList = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        if (db.__isMock) {
+          setOrders([]);
+          setLoading(false);
+          return;
+        }
+        const q = query(collection(db, "orders"), orderBy("placedAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        const list = [];
+        querySnapshot.forEach((doc) => {
+          list.push({ _id: doc.id, ...doc.data() });
+        });
+        setOrders(list);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  if (loading) return <div className="p-6">Loading orders...</div>;
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-serif font-medium mb-6">Orders</h2>
 
-      <div className="text-center py-12 border border-dashed border-neutral-300 rounded">
-        <p className="text-lg text-neutral-500 mb-4">No orders yet.</p>
-        <p className="text-neutral-500">
-          Orders will appear here when customers make purchases.
-        </p>
-      </div>
+      {orders.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-neutral-300 rounded">
+          <p className="text-lg text-neutral-500 mb-4">No orders yet.</p>
+          <p className="text-neutral-500">
+            Orders will appear here when customers make purchases.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-neutral-100">
+                <th className="border border-neutral-200 p-3 text-left">Order ID</th>
+                <th className="border border-neutral-200 p-3 text-left">Date</th>
+                <th className="border border-neutral-200 p-3 text-left">Customer</th>
+                <th className="border border-neutral-200 p-3 text-left">Total</th>
+                <th className="border border-neutral-200 p-3 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((order) => (
+                <tr key={order._id} className="hover:bg-neutral-50">
+                  <td className="border border-neutral-200 p-3 font-mono text-sm text-blue-600">
+                    {order.orderId}
+                  </td>
+                  <td className="border border-neutral-200 p-3 text-neutral-600 text-sm">
+                    {new Date(order.placedAt).toLocaleDateString()}
+                  </td>
+                  <td className="border border-neutral-200 p-3 font-medium text-neutral-900">
+                    {order.customerName}
+                  </td>
+                  <td className="border border-neutral-200 p-3 text-neutral-600">
+                    ₹{Number(order.totalAmount || order.total || 0).toFixed(2)}
+                  </td>
+                  <td className="border border-neutral-200 p-3">
+                    <span className="px-2.5 py-1 text-xs font-semibold rounded bg-green-50 text-green-700">
+                      {order.deliveryStatus}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
@@ -265,15 +348,60 @@ const NewProduct = () => {
     }
     setLoading(true);
     try {
-      // 1. Upload image to Sanity
-      const imageAsset = await client.assets.upload("image", imageFile, {
-        filename: imageFile.name,
-      });
+      if (db.__isMock) {
+        const productSlug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        const list = localSaved ? JSON.parse(localSaved) : [];
+        const mockImg = "/images/product-placeholder.jpg";
+        
+        const newProduct = {
+          _id: `local-custom-${Date.now()}`,
+          name: formData.name,
+          slug: productSlug,
+          price: Number(formData.price),
+          mrp: Number(formData.price),
+          description: formData.description,
+          category: formData.category,
+          stock: Number(formData.stock),
+          featured: formData.featured,
+          bestSeller: formData.bestSeller,
+          new: formData.new,
+          image: mockImg,
+          images: [mockImg],
+          thumbnail: mockImg,
+        };
+
+        list.push(newProduct);
+        localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        alert("Product created successfully! (Local Mock Mode)");
+        setImageFile(null);
+        setFormData({
+          name: "",
+          category: "women",
+          price: "",
+          description: "",
+          stock: "",
+          featured: false,
+          bestSeller: false,
+          new: true,
+        });
+        setLoading(false);
+        return;
+      }
+
+      const productSlug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+      // 1. Upload image to Firebase Storage
+      const extension = imageFile.name.split(".").pop();
+      const imageRef = ref(storage, `products/${productSlug}/image-1-${Date.now()}.${extension}`);
+      await uploadBytes(imageRef, imageFile);
+      const url = await getDownloadURL(imageRef);
 
       // 2. Create product with the newly uploaded image
-      await client.create({
-        _type: "product",
+      await setDoc(doc(db, "products", productSlug), {
         name: formData.name,
+        slug: productSlug,
         price: Number(formData.price),
         description: formData.description,
         category: formData.category,
@@ -281,16 +409,9 @@ const NewProduct = () => {
         featured: formData.featured,
         bestSeller: formData.bestSeller,
         new: formData.new,
-        image: imageAsset.url,
-        images: [
-          {
-            _type: "image",
-            asset: {
-              _type: "reference",
-              _ref: imageAsset._id,
-            },
-          },
-        ],
+        image: url,
+        images: [url],
+        thumbnail: url,
       });
 
       // Invalidate React Query cache so the new product shows up instantly on the live website
@@ -534,6 +655,37 @@ const EditProduct = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      if (db.__isMock) {
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        if (localSaved) {
+          const list = JSON.parse(localSaved);
+          const index = list.findIndex((p) => p._id === id);
+          if (index !== -1) {
+            const product = list[index];
+            list[index] = {
+              ...product,
+              name: formData.name,
+              price: Number(formData.price),
+              description: formData.description,
+              category: formData.category,
+              stock: Number(formData.stock),
+              featured: formData.featured,
+              bestSeller: formData.bestSeller,
+              new: formData.new,
+            };
+            localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        toast.success("Product updated successfully! (Local Mock Mode)");
+        navigate("/admin/products");
+        setLoading(false);
+        return;
+      }
+
+      const product = allProducts.find((p) => p._id === id);
+      const productSlug = product?.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
       let updatePayload = {
         name: formData.name,
         price: Number(formData.price),
@@ -546,19 +698,17 @@ const EditProduct = () => {
       };
 
       if (imageFile) {
-        const imageAsset = await client.assets.upload("image", imageFile, {
-          filename: imageFile.name,
-        });
-        updatePayload.image = imageAsset.url;
-        updatePayload.images = [
-          {
-            _type: "image",
-            asset: { _type: "reference", _ref: imageAsset._id },
-          },
-        ];
+        const extension = imageFile.name.split(".").pop();
+        const imageRef = ref(storage, `products/${productSlug}/image-1-${Date.now()}.${extension}`);
+        await uploadBytes(imageRef, imageFile);
+        const url = await getDownloadURL(imageRef);
+        
+        updatePayload.image = url;
+        updatePayload.images = [url];
+        updatePayload.thumbnail = url;
       }
 
-      await client.patch(id).set(updatePayload).commit();
+      await updateDoc(doc(db, "products", id), updatePayload);
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Product updated successfully!");
       navigate("/admin/products");
@@ -727,7 +877,7 @@ const Stats = () => {
               className="flex-1 flex flex-col items-center group relative"
             >
               <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-xs py-1 px-2 rounded">
-                ${amount}
+                ₹{amount}
               </div>
               <div
                 className="w-full bg-amber/80 hover:bg-amber transition-all duration-300 rounded-t-sm"
@@ -767,25 +917,22 @@ const Stats = () => {
 const AdminLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-
-  const checkAuth = () => {
-    // TEMPORARILY BYPASSED FOR TESTING
-    /* 
-    if (!isAuthenticated) {
-      navigate("/login");
-      return false;
-    }
-    */
-    return true;
-  };
+  const { user, isAuthenticated, loading, logout } = useAuth();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!loading && !isAuthenticated) {
+      navigate("/login", {
+        state: { from: location.pathname, message: "Please log in to access the admin panel." },
+        replace: true,
+      });
+    }
+  }, [loading, isAuthenticated, navigate, location.pathname]);
 
-  // TEMPORARILY BYPASSED
-  // if (!isAuthenticated) return null;
+  // Show nothing while Firebase is resolving the auth state
+  if (loading) return null;
+
+  // Block render if not authenticated (navigate will fire via useEffect)
+  if (!isAuthenticated) return null;
 
   return (
     <div className="pt-24 pb-16">
@@ -836,9 +983,20 @@ const AdminLayout = ({ children }) => {
               >
                 Statistics
               </Link>
+              <Link
+                to="/admin/migrate"
+                className={`block p-4 hover:bg-neutral-50 ${
+                  location.pathname.includes("/admin/migrate")
+                    ? "bg-neutral-100 font-medium"
+                    : ""
+                }`}
+              >
+                Data Migration
+              </Link>
               <button
-                onClick={() => {
-                  navigate("/login");
+                onClick={async () => {
+                  await logout();
+                  navigate("/login", { replace: true });
                 }}
                 className="block w-full text-left p-4 text-red-600 hover:bg-neutral-50"
               >
@@ -856,6 +1014,7 @@ const AdminLayout = ({ children }) => {
               <Route path="products/edit/:id" element={<EditProduct />} />
               <Route path="orders" element={<OrdersList />} />
               <Route path="stats" element={<Stats />} />
+              <Route path="migrate" element={<Migrate />} />
             </Routes>
           </div>
         </div>

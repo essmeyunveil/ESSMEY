@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from "react";
-import { client } from "./sanity";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "./firebase";
 import { useAuth } from "./AuthContext";
 
 const AppContext = createContext();
@@ -20,28 +21,44 @@ export const AppProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
 
-  // Search function using Sanity
-  const handleSearch = async (query) => {
-    if (!query.trim()) {
+  // Search function using Firestore
+  const handleSearch = async (queryStr) => {
+    if (!queryStr.trim()) {
       setSearchResults([]);
       return;
     }
     try {
       setLoading(true);
       setError(null);
-      const lowerQuery = query.toLowerCase();
-      const groqQuery = `*[_type == "product" && name match $searchTerm]{
-        _id,
-        name,
-        price,
-        "image": images[0].asset->url
-      }`;
-      const results = await client.fetch(groqQuery, {
-        searchTerm: "*" + lowerQuery + "*",
+      const lowerQuery = queryStr.toLowerCase();
+
+      if (db.__isMock) {
+        setSearchResults([]);
+        return;
+      }
+
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const allProducts = [];
+      querySnapshot.forEach((doc) => {
+        allProducts.push({ _id: doc.id, ...doc.data() });
       });
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Error fetching search results from Sanity:", error);
+
+      const filtered = allProducts
+        .filter(
+          (product) =>
+            product.name?.toLowerCase().includes(lowerQuery) ||
+            product.category?.toLowerCase().includes(lowerQuery)
+        )
+        .map((p) => ({
+          _id: p._id,
+          name: p.name,
+          price: p.price,
+          image: p.thumbnail || (p.images && p.images[0]) || "",
+        }));
+
+      setSearchResults(filtered);
+    } catch (err) {
+      console.error("Error fetching search results from Firestore:", err);
       setError("Failed to fetch search results");
       setSearchResults([]);
     } finally {

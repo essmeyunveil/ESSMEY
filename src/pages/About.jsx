@@ -6,7 +6,12 @@ const About = () => {
       {/* Hero Section */}
       <section className="relative bg-black text-white py-20 mb-16 overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[url('/images/essmeybg.jpg')] bg-cover bg-center"></div>
-        <div className="container-custom text-center max-w-3xl mx-auto relative z-10">
+        <div className="container-custom text-center max-w-3xl mx-auto relative z-10 flex flex-col items-center">
+          <img
+            src="/images/essmey-brand-logo.jpg"
+            alt="Essmey Crest"
+            className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border border-amber/50 shadow-2xl mb-6 shadow-amber/10"
+          />
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-amber">
             Our Story
           </h1>

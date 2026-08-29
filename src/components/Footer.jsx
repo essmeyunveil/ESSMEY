@@ -6,7 +6,8 @@ import {
   FaTwitter,
 } from "react-icons/fa";
 import { useState } from "react";
-import { client } from "../utils/sanity";
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { db } from "../utils/firebase";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -30,21 +31,25 @@ const Footer = () => {
     setIsSubmitting(true);
 
     try {
-      // Enhanced query to check for email existence
-      const existing = await client.fetch(
-        `*[_type == "newsletter" && email == $email]`,
-        { email }
-      );
+      if (db.__isMock) {
+        setMessage("Thank you for subscribing (Mock Mode)!");
+        setEmail("");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Enhanced query to check for email existence in Firestore
+      const q = query(collection(db, "newsletter"), where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
       // Check if any existing records are found
-      if (existing.length > 0) {
+      if (!querySnapshot.empty) {
         setMessage("You're already subscribed.");
         setIsSubmitting(false);
         return;
       }
 
-      await client.create({
-        _type: "newsletter",
+      await addDoc(collection(db, "newsletter"), {
         email,
         subscribedAt: new Date().toISOString(),
       });
@@ -69,12 +74,24 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand and Newsletter */}
           <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="block text-3xl font-serif font-bold mb-4">
-              <span className="text-amber">ESSMEY</span>
+            <Link to="/" className="inline-flex items-center gap-3.5 mb-5 group">
+              <img
+                src="/images/essmey-brand-logo.jpg"
+                alt="ESSMEY Logo"
+                className="w-14 h-14 rounded-xl object-cover border border-amber/40 shadow-lg group-hover:border-amber transition-colors"
+              />
+              <div>
+                <span className="block text-2xl sm:text-3xl font-serif tracking-[0.16em] font-bold text-amber leading-none">
+                  ESSMEY
+                </span>
+                <span className="text-[9px] tracking-[0.28em] uppercase text-amber-200/70 font-medium mt-1 block">
+                  Unveil Your Essence
+                </span>
+              </div>
             </Link>
-            <p className="text-neutral-400 mb-6 max-w-xs">
+            <p className="text-neutral-400 mb-6 max-w-sm text-sm leading-relaxed">
               Unveil your essence with our handcrafted perfumes, meticulously
-              created to reflect your unique personality.
+              created to reflect your unique personality and timeless elegance.
             </p>
             <h4 className="text-sm font-medium mb-3 text-amber">
               SUBSCRIBE TO OUR NEWSLETTER

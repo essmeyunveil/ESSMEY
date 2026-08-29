@@ -66,6 +66,9 @@ const ProductCard = ({ product }) => {
     product.images && product.images.length > 0
       ? getImageUrl(product.images[0]) || FALLBACK_IMAGE
       : FALLBACK_IMAGE;
+  const saving = Number(product.mrp) > Number(product.price)
+    ? Math.round(((Number(product.mrp) - Number(product.price)) / Number(product.mrp)) * 100)
+    : 0;
 
   const handleImageError = (e) => {
     console.error("Error loading product image:", e);
@@ -124,6 +127,10 @@ const ProductCard = ({ product }) => {
       <Link to={`/product/${productId}`} className="block h-full">
         <div className="relative overflow-hidden group">
           <div className="aspect-[3/4] bg-neutral-100 overflow-hidden relative">
+            <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-2">
+              {product.new && <span className="rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase text-neutral-900 shadow-sm">New arrival</span>}
+              {product.bestSeller && <span className="rounded-full bg-[#2b1d12] px-3 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase text-white shadow-sm">Bestseller</span>}
+            </div>
             {imageLoading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="animate-pulse bg-neutral-200 w-full h-full"></div>
@@ -182,19 +189,17 @@ const ProductCard = ({ product }) => {
               )}
             </div>
           </div>
-          <div className="p-4">
-            <h3 className="text-lg font-medium">
+          <div className="p-5 bg-white">
+            <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-amber-700 mb-2">{product.brand || "Essmey"}{product.volume ? ` · ${product.volume}` : ""}</p>
+            <h3 className="text-lg font-serif font-medium text-neutral-900">
               {product.name || "Unnamed Product"}
             </h3>
-            <div className="flex justify-between items-center mt-1">
-              <span className="text-neutral-600">
+            <div className="flex justify-between items-end gap-3 mt-3">
+              <span className="text-neutral-900 font-semibold">
                 {formatPrice(product.price)}
+                {product.mrp && Number(product.mrp) > Number(product.price) && <span className="ml-2 text-xs font-normal text-neutral-400 line-through">{formatPrice(product.mrp)}</span>}
               </span>
-              {product.category && (
-                <span className="text-xs text-neutral-500 uppercase">
-                  {product.category}
-                </span>
-              )}
+              {saving > 0 ? <span className="text-xs font-semibold text-emerald-700">Save {saving}%</span> : product.category && <span className="text-xs text-neutral-500 uppercase">{product.category}</span>}
             </div>
           </div>
         </div>

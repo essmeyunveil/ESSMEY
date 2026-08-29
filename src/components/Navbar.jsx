@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   ShoppingBagIcon,
   UserIcon,
@@ -12,7 +12,8 @@ import { useAuth } from "../utils/AuthContext";
 import { useCartStore } from "../store/useCartStore";
 
 const Navbar = () => {
-  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,7 +22,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 10) {
+      if (window.scrollY > 15) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -44,10 +45,24 @@ const Navbar = () => {
     }
   };
 
+  // Determine if header is sitting transparently over a dark background section
+  const isDarkHeroPage = location.pathname === "/" || location.pathname === "/about";
+  const isTransparent = !isScrolled && isDarkHeroPage;
+
+  const navLinkClass = isTransparent
+    ? "text-stone-100 hover:text-amber-300 font-medium text-sm transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+    : "text-stone-800 hover:text-amber font-medium text-sm transition-colors";
+
+  const iconClass = isTransparent
+    ? "text-stone-100 hover:text-amber-300 transition-colors drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+    : "text-stone-800 hover:text-amber transition-colors";
+
   return (
     <header
       className={`fixed top-0 left-0 z-50 w-full transition-all duration-300 ${
-        isScrolled ? "bg-white shadow-md py-3" : "bg-transparent py-5"
+        isTransparent
+          ? "bg-transparent py-5"
+          : "bg-white/95 backdrop-blur-md shadow-sm py-3 border-b border-stone-100"
       }`}
     >
       <div className="container-custom grid grid-cols-3 items-center gap-4">
@@ -57,30 +72,25 @@ const Navbar = () => {
           <button
             className="md:hidden p-2 -ml-2 rounded-full hover:bg-amber/10 transition-colors"
             onClick={toggleMobileMenu}
+            aria-label="Toggle Navigation Menu"
           >
             {isMobileMenuOpen ? (
-              <XMarkIcon className="h-6 w-6 text-black hover:text-amber transition-colors" />
+              <XMarkIcon className={`h-6 w-6 ${iconClass}`} />
             ) : (
-              <Bars3Icon className="h-6 w-6 text-black hover:text-amber transition-colors" />
+              <Bars3Icon className={`h-6 w-6 ${iconClass}`} />
             )}
           </button>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Link
-              to="/"
-              className="nav-link hover:text-amber transition-colors"
-            >
+            <Link to="/" className={navLinkClass}>
               Home
             </Link>
-            <Link
-              to="/shop"
-              className="nav-link hover:text-amber transition-colors"
-            >
+            <Link to="/shop" className={navLinkClass}>
               Shop
             </Link>
             <div className="relative group">
-              <button className="nav-link flex items-center hover:text-amber transition-colors">
+              <button className={`flex items-center ${navLinkClass}`}>
                 Collections
                 <svg
                   className="ml-1 h-4 w-4"
@@ -117,16 +127,10 @@ const Navbar = () => {
                 </div>
               </div>
             </div>
-            <Link
-              to="/about"
-              className="nav-link hover:text-amber transition-colors"
-            >
+            <Link to="/about" className={navLinkClass}>
               About
             </Link>
-            <Link
-              to="/contact"
-              className="nav-link hover:text-amber transition-colors"
-            >
+            <Link to="/contact" className={navLinkClass}>
               Contact
             </Link>
           </nav>
@@ -136,9 +140,25 @@ const Navbar = () => {
         <div className="flex items-center justify-center">
           <Link
             to="/"
-            className="text-3xl md:text-4xl font-serif tracking-widest font-bold"
+            className="flex items-center gap-2.5 sm:gap-3.5 group transition-transform hover:scale-[1.02]"
           >
-            <span className="text-amber">ESSMEY</span>
+            <img
+              src="/images/essmey-brand-logo.jpg"
+              alt="Essmey Logo"
+              className="h-9 w-9 sm:h-11 sm:w-11 rounded-full object-cover border border-amber/50 shadow-sm"
+            />
+            <div className="flex flex-col text-left">
+              <span className="text-xl sm:text-2xl md:text-3xl font-serif tracking-[0.16em] font-bold text-amber leading-none">
+                ESSMEY
+              </span>
+              <span
+                className={`text-[8px] sm:text-[9px] tracking-[0.28em] uppercase font-medium hidden sm:block mt-1 ${
+                  isTransparent ? "text-amber-200/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" : "text-stone-500"
+                }`}
+              >
+                Unveil Your Essence
+              </span>
+            </div>
           </Link>
         </div>
 
@@ -146,7 +166,7 @@ const Navbar = () => {
         <div className="flex items-center justify-end space-x-3 md:space-x-4">
           <Link
             to="/scent-finder"
-            className="hidden lg:inline-flex essmey-learnmore-btn !px-4 !py-2 !text-xs !bg-amber border-none text-white hover:!bg-black hover:!text-white mr-2"
+            className="hidden lg:inline-flex essmey-learnmore-btn !px-4 !py-2 !text-xs !bg-amber border-none text-white hover:!bg-black hover:!text-white mr-2 shadow-sm"
           >
             Find Your Scent
           </Link>
@@ -155,27 +175,38 @@ const Navbar = () => {
             onClick={toggleSearchModal}
             aria-label="Search"
           >
-            <MagnifyingGlassIcon className="h-5 w-5 text-black hover:text-amber transition-colors" />
+            <MagnifyingGlassIcon className={`h-5 w-5 ${iconClass}`} />
           </button>
           <Link
             to="/wishlist"
             className="p-1 rounded-full hover:bg-amber/10 transition-colors hidden sm:block"
+            aria-label="Wishlist"
           >
-            <HeartIcon className="h-5 w-5 text-black hover:text-amber transition-colors" />
+            <HeartIcon className={`h-5 w-5 ${iconClass}`} />
           </Link>
           <Link
             to={isAuthenticated ? "/account" : "/login"}
-            className="p-1 rounded-full hover:bg-amber/10 transition-colors hidden sm:block"
+            className="p-1 rounded-full hover:bg-amber/10 transition-colors hidden sm:flex items-center justify-center"
+            title={isAuthenticated ? `Account (${user?.displayName || "User"})` : "Sign In"}
           >
-            <UserIcon className="h-5 w-5 text-black hover:text-amber transition-colors" />
+            {user?.imageUrl ? (
+              <img
+                src={user.imageUrl}
+                alt={user.displayName}
+                className="w-6 h-6 rounded-full object-cover border border-amber-600 shadow-sm"
+              />
+            ) : (
+              <UserIcon className={`h-5 w-5 ${isAuthenticated ? "text-amber-700 font-bold" : iconClass}`} />
+            )}
           </Link>
           <Link
             to="/cart"
             className="relative p-1 rounded-full hover:bg-amber/10 transition-colors"
+            aria-label="Cart"
           >
-            <ShoppingBagIcon className="h-5 w-5 text-black hover:text-amber transition-colors" />
+            <ShoppingBagIcon className={`h-5 w-5 ${iconClass}`} />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex items-center justify-center h-4 w-4 text-xs bg-amber text-white rounded-full">
+              <span className="absolute -top-1 -right-1 flex items-center justify-center h-4 w-4 text-xs bg-amber text-white rounded-full font-medium shadow-sm">
                 {cartCount}
               </span>
             )}

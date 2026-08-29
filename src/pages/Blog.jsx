@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { client } from "../utils/sanity";
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy } from "firebase/firestore";
+import { db } from "../utils/firebase";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 function Blog() {
@@ -22,19 +23,18 @@ function Blog() {
 
   const fetchPosts = async () => {
     try {
-      const data = await client.fetch(
-        `*[_type == "blogPost"] | order(publishedAt desc) {
-          _id,
-          title,
-          slug,
-          mainImage{ asset->{url} },
-          excerpt,
-          publishedAt,
-          author,
-          categories
-        }`
-      );
-      setPosts(data);
+      if (db.__isMock) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+      const q = query(collection(db, "blogs"), orderBy("publishedAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      const list = [];
+      querySnapshot.forEach((doc) => {
+        list.push({ _id: doc.id, ...doc.data() });
+      });
+      setPosts(list);
       setLoading(false);
     } catch (e) {
       setError("Could not load blog posts");
@@ -50,39 +50,36 @@ function Blog() {
     e.preventDefault();
     setCreating(true);
     try {
+      if (db.__isMock) {
+        alert("Firebase is running in local MOCK mode. Cannot write post.");
+        setCreating(false);
+        return;
+      }
+      const postSlug = form.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       const postData = {
-        _type: "blogPost",
         title: form.title,
+        slug: { current: postSlug },
         excerpt: form.excerpt,
-        content: form.content,
+        content: [
+          {
+            _type: "block",
+            children: [{ _type: "span", text: form.content }],
+            style: "normal",
+          }
+        ],
         categories: form.categories.split(",").map((cat) => cat.trim()),
         publishedAt: new Date().toISOString(),
         author: {
-          _type: "reference",
-          _ref: "author-id", // You'll need to replace this with the actual author ID
+          name: "Admin"
         },
       };
 
-      await client.create(postData);
-      // console.log("Post created successfully!");
+      await addDoc(collection(db, "blogs"), postData);
       setForm({ title: "", excerpt: "", content: "", categories: "" });
       setWriteMode(false);
+      
       // Refresh posts
-      const updatedPosts = await client.fetch(
-        `*[_type == "blogPost"] | order(publishedAt desc) {
-          _id,
-          title,
-          slug,
-          mainImage{
-            asset->{url}
-          },
-          excerpt,
-          publishedAt,
-          author,
-          categories
-        }`
-      );
-      setPosts(updatedPosts);
+      await fetchPosts();
     } catch (error) {
       console.error("Failed to create post. Please try again.", error);
     } finally {
@@ -92,7 +89,8 @@ function Blog() {
 
   const handlePublish = async (postId) => {
     try {
-      await client.patch(postId).set({ published: true }).commit();
+      if (db.__isMock) return;
+      await updateDoc(doc(db, "blogs", postId), { published: true });
       fetchPosts();
     } catch (err) {
       console.error("Error publishing post:", err);

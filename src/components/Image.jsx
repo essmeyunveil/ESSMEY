@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@chakra-ui/react";
 
 const logError = (error, context) => {
@@ -15,12 +15,18 @@ const Image = ({
   width,
   height,
   loading = "lazy",
-  fallbackSrc = "/placeholder.png",
+  fallbackSrc = "/images/product-1.jpg",
   ...props
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState(src);
+
+  useEffect(() => {
+    setCurrentSrc(src);
+    setIsLoading(true);
+    setError(false);
+  }, [src]);
 
   const handleLoad = () => {
     try {

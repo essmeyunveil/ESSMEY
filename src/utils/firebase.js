@@ -1,5 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const logError = (error, context) => {
   console.error(`[Firebase Error] ${context}:`, error);
@@ -9,25 +11,27 @@ const logError = (error, context) => {
   }
 };
 
-// Check for required environment variables
+// Check for required environment variables only in production
 const validateEnv = () => {
-  const requiredEnvVars = [
-    "VITE_FIREBASE_API_KEY",
-    "VITE_FIREBASE_AUTH_DOMAIN",
-    "VITE_FIREBASE_PROJECT_ID",
-    "VITE_FIREBASE_STORAGE_BUCKET",
-    "VITE_FIREBASE_MESSAGING_SENDER_ID",
-    "VITE_FIREBASE_APP_ID",
-  ];
+  if (import.meta.env.PROD) {
+    const requiredEnvVars = [
+      "VITE_FIREBASE_API_KEY",
+      "VITE_FIREBASE_AUTH_DOMAIN",
+      "VITE_FIREBASE_PROJECT_ID",
+      "VITE_FIREBASE_STORAGE_BUCKET",
+      "VITE_FIREBASE_MESSAGING_SENDER_ID",
+      "VITE_FIREBASE_APP_ID",
+    ];
 
-  const missingVars = requiredEnvVars.filter(
-    (varName) => !import.meta.env[varName]
-  );
-
-  if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(", ")}`
+    const missingVars = requiredEnvVars.filter(
+      (varName) => !import.meta.env[varName]
     );
+
+    if (missingVars.length > 0) {
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(", ")}`
+      );
+    }
   }
 };
 
@@ -35,7 +39,12 @@ try {
   validateEnv();
 } catch (error) {
   logError(error, "Environment validation");
-  throw error;
+  // In development, continue with a mock auth to avoid hard crash
+  if (!import.meta.env.PROD) {
+    console.warn("Continuing in dev mode without Firebase credentials.");
+  } else {
+    throw error;
+  }
 }
 
 // Your web app's Firebase configuration
@@ -50,23 +59,34 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app;
+let auth;
+let db;
+let storage;
 try {
-  app = initializeApp(firebaseConfig);
+  // If running in production we expect valid config; in dev create app only if apiKey present
+  if (import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_API_KEY !== "local") {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+  } else {
+    // Provide a lightweight mock auth and DB objects to avoid runtime crashes in dev
+    auth = { __isMock: true };
+    db = { __isMock: true };
+    storage = { __isMock: true };
+  }
 } catch (error) {
   logError(error, "Firebase initialization");
-  throw new Error("Failed to initialize Firebase");
+  if (!import.meta.env.PROD) {
+    auth = { __isMock: true };
+    db = { __isMock: true };
+    storage = { __isMock: true };
+  } else {
+    throw new Error("Failed to initialize Firebase");
+  }
 }
 
-// Initialize Firebase Auth
-let auth;
-try {
-  auth = getAuth(app);
-} catch (error) {
-  logError(error, "Firebase Auth initialization");
-  throw new Error("Failed to initialize Firebase Auth");
-}
-
-export { auth };
+export { auth, db, storage };
 
 // Helper function to handle Firebase Auth operations with error handling
 export const handleAuthError = (error) => {

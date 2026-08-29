@@ -1,7 +1,8 @@
 import { useAuth } from "../utils/AuthContext";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { client } from "../utils/sanity";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "../utils/firebase";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Account() {
@@ -18,23 +19,43 @@ export default function Account() {
       }
       setLoading(true);
       try {
-        const query = `*[_type == "order" && userId == $userId] | order(placedAt desc) {
-          _id,
-          orderId,
-          deliveryStatus,
-          total,
-          placedAt,
-          items[]{
-            _key,
-            name,
-            price,
-            quantity,
-            "image": asset->url
-          }
-        }`;
-        const params = { userId: user.uid };
-        const fetchedOrders = await client.fetch(query, params);
-        // console.log("Fetched orders:", fetchedOrders);
+        if (db.__isMock) {
+          setOrders([]);
+          setLoading(false);
+          return;
+        }
+
+        const q = query(
+          collection(db, "orders"),
+          where("userId", "==", user.uid),
+          orderBy("placedAt", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+        const fetchedOrders = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const items = (data.items || []).map((item) => {
+            const product = item.product || {};
+            return {
+              _key: item._key || Math.random().toString(36).substr(2, 9),
+              name: product.name || item.name || "",
+              price: product.price || item.price || 0,
+              quantity: item.quantity || 1,
+              image: product.image || item.image || null,
+            };
+          });
+
+          fetchedOrders.push({
+            _id: doc.id,
+            orderId: data.orderId,
+            placedAt: data.placedAt || data.createdAt,
+            total: data.totalAmount || data.total,
+            deliveryStatus: data.deliveryStatus,
+            items: items,
+          });
+        });
+
         setOrders(fetchedOrders);
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -51,20 +72,35 @@ export default function Account() {
   }
 
   return (
-    <div className="pt-28 pb-20 min-h-[60vh] container-custom max-w-2xl mx-auto">
-      <h1 className="text-3xl font-serif font-bold mb-6">My Account</h1>
-      <div className="bg-white border rounded-lg shadow p-8 mb-10">
-        <div className="mb-2">
-          <span className="font-medium">Email:</span> {user.email}
+    <div className="pt-28 pb-20 min-h-[60vh] container-custom max-w-2xl mx-auto px-4">
+      <h1 className="text-3xl font-serif font-medium text-stone-900 mb-6">My Account</h1>
+      <div className="bg-white border border-stone-200 rounded-2xl shadow-sm p-6 sm:p-8 mb-10">
+        <div className="flex items-center gap-4 mb-6">
+          {user.imageUrl ? (
+            <img
+              src={user.imageUrl}
+              alt={user.displayName}
+              className="w-16 h-16 rounded-full object-cover border-2 border-amber-600/30"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-serif text-2xl font-bold">
+              {user.displayName?.charAt(0)?.toUpperCase() || "E"}
+            </div>
+          )}
+          <div>
+            <h2 className="text-xl font-serif font-medium text-stone-900">{user.displayName}</h2>
+            <p className="text-sm text-stone-500">{user.email}</p>
+          </div>
         </div>
+
         <button
-          className="btn-secondary mt-6"
-          onClick={() => {
-            logout();
+          className="btn-secondary text-sm px-6 py-2.5 rounded-lg"
+          onClick={async () => {
+            await logout();
             navigate("/");
           }}
         >
-          Log Out
+          Sign Out
         </button>
       </div>
 

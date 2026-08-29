@@ -1,59 +1,65 @@
 import { useQuery } from "@tanstack/react-query";
-import { client } from "../../utils/sanity";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../utils/firebase";
 
 export const useProducts = () => {
   return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       try {
-        const data = await client.fetch(
-          `*[_type == "product"] {
-            _id,
-            name,
-            description,
-            price,
-            stock,
-            category,
-            featured,
-            new,
-            bestSeller,
-            images[] {
-              asset-> {
-                _id,
-                url,
-                metadata {
-                  dimensions {
-                    width,
-                    height
-                  }
-                }
-              }
-            }
-          }`
-        );
+        if (db.__isMock) {
+          throw new Error("Firebase is running in local MOCK mode");
+        }
 
-        // Strict Remote Enforcement: No local fallback Data
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const productsList = [];
+        querySnapshot.forEach((doc) => {
+          productsList.push({ _id: doc.id, ...doc.data() });
+        });
 
-        return data.map((product) => ({
-          ...product,
-          images:
-            product.images?.map((image) => ({
-              ...image,
-              asset: {
-                _ref: image.asset?._id,
-                _type: "image",
-                url: image.asset?.url,
-              },
-            })) || [],
-          featured: product.featured || false,
-          bestSeller: product.bestSeller || false,
-          new: product.new || false,
-          price: product.price || 0,
-          stock: product.stock || 0,
-        }));
+        if (productsList.length === 0) {
+          throw new Error("No products found in Firestore");
+        }
+
+        return productsList;
       } catch (error) {
-        console.error("Sanity fetch failed:", error);
-        return [];
+        console.warn("Using local storage/sample fallback for products:", error.message);
+        
+        // Retrieve from localStorage (v2 key to clear old cached products list) or fallback to sample data
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        if (localSaved) {
+          try {
+            return JSON.parse(localSaved);
+          } catch (e) {
+            console.error("Failed to parse mock products:", e);
+          }
+        }
+
+        const sampleProducts = [
+          {
+            _id: "local-1",
+            name: "Midnight Allure",
+            slug: "midnight-allure",
+            description: "A seductive blend of jasmine, vanilla, and amber notes that unfolds throughout the evening. Perfect for those who appreciate a rich, premium fragrance with lasting power.",
+            price: 699,
+            mrp: 999,
+            stock: 15,
+            category: "unisex",
+            featured: true,
+            bestSeller: true,
+            new: true,
+            images: ["/images/product-1.jpg"],
+            thumbnail: "/images/product-1.jpg",
+            notes: {
+              top: ["Bergamot", "Black Currant", "Pink Pepper"],
+              middle: ["Jasmine", "Rose", "Ylang-Ylang"],
+              base: ["Vanilla", "Amber", "Patchouli"],
+            }
+          }
+        ];
+
+        localStorage.setItem("essmey_mock_products_v2", JSON.stringify(sampleProducts));
+        return sampleProducts;
       }
     },
     staleTime: 1000 * 60 * 60, // 1 hour caching

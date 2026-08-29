@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { client } from "../utils/sanity";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../utils/firebase";
 
 const calculateDeliveryStatus = (placedAt) => {
   const placedDate = new Date(placedAt);
@@ -34,34 +35,41 @@ export default function TransOrder() {
         return;
       }
 
-      const result = await client.fetch(
-        `*[_type == "order" && orderId == $orderId][0]{
-          _id,
-          orderId,
-          status,
-          totalAmount,
-          items[]{
-            product->{
-              _id,
-              name,
-              price,
-              "image": images[0].asset->url
-            },
-            quantity
-          },
-          shippingAddress,
-          createdAt
-        }`,
-        { orderId: trimmedOrderId }
-      );
-      if (!result) {
+      if (db.__isMock) {
+        setError("Firebase is running in local MOCK mode.");
+        return;
+      }
+
+      const docRef = doc(db, "orders", trimmedOrderId);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
         setError(
           "No order found with this ID. Please check the ID and try again. If the problem persists, contact support."
         );
         return;
       }
+
+      const data = docSnap.data();
+      const result = {
+        ...data,
+        _id: docSnap.id,
+        totalAmount: data.totalAmount || data.total,
+        placedAt: data.placedAt || data.createdAt,
+      };
+
       setOrder(result);
-      setStatus(calculateDeliveryStatus(result.createdAt));
+      setStatus(
+        result.deliveryStatus
+          ? result.deliveryStatus === "confirmed"
+            ? "Order Confirmed"
+            : result.deliveryStatus === "in_transit"
+            ? "In Transit"
+            : result.deliveryStatus === "delivered"
+            ? "Delivered"
+            : result.deliveryStatus
+          : calculateDeliveryStatus(result.placedAt)
+      );
     } catch (err) {
       setError("Something went wrong. Please try again.");
       console.error(err);
@@ -125,7 +133,7 @@ export default function TransOrder() {
             </p>
             <p>
               <span className="font-semibold">Placed On: </span>
-              {new Date(order.createdAt).toDateString()}
+              {new Date(order.placedAt).toDateString()}
             </p>
             <p>
               <span className="font-semibold">Status: </span>

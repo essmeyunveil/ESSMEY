@@ -1,31 +1,7 @@
-import { useEffect } from "react";
-import { SignIn } from "@clerk/clerk-react";
-import { useAuth } from "../utils/AuthContext";
-import { useNavigate, Navigate, Link, useLocation } from "react-router-dom";
-import { useToastContext } from "../utils/ToastContext";
+import { SignUp } from "@clerk/clerk-react";
+import { Link } from "react-router-dom";
 
-const Login = () => {
-  const { user } = useAuth();
-  const { addToast } = useToastContext() || {};
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Show toast notification if redirected from checkout
-  useEffect(() => {
-    const fromCheckout = location.state?.from === "/checkout";
-    if (fromCheckout && addToast) {
-      addToast(
-        location.state.message || "Please sign in to proceed with checkout",
-        "info"
-      );
-    }
-  }, [location.state, addToast]);
-
-  if (user) {
-    const fromPath = location.state?.from || "/account";
-    return <Navigate to={fromPath} replace />;
-  }
-
+export default function SignUpPage() {
   return (
     <div className="pt-28 pb-20 min-h-[75vh] flex flex-col justify-center items-center bg-[#faf9f6] px-4">
       <div className="mb-6 text-center flex flex-col items-center">
@@ -36,15 +12,15 @@ const Login = () => {
             className="w-16 h-16 rounded-2xl object-cover border border-amber-600/30 shadow-md mb-3 hover:scale-105 transition-transform"
           />
         </Link>
-        <h1 className="text-3xl font-serif font-medium text-stone-900 mt-1">Welcome Back</h1>
-        <p className="text-sm text-stone-500 mt-1">Sign in to access your bespoke fragrances & orders.</p>
+        <h1 className="text-3xl font-serif font-medium text-stone-900 mt-1">Create Your Account</h1>
+        <p className="text-sm text-stone-500 mt-1">Join Essmey for bespoke fragrance privileges.</p>
       </div>
 
       <div className="w-full max-w-md flex justify-center">
-        <SignIn
+        <SignUp
           routing="path"
-          path="/login"
-          signUpUrl="/sign-up"
+          path="/sign-up"
+          signInUrl="/login"
           appearance={{
             variables: {
               colorPrimary: "#b45309",
@@ -64,14 +40,11 @@ const Login = () => {
       </div>
 
       <div className="mt-8 text-center text-sm text-stone-500">
-        New to Essmey?{" "}
-        <Link to="/sign-up" className="text-amber-700 font-semibold hover:underline">
-          Create an account
+        Already have an account?{" "}
+        <Link to="/login" className="text-amber-700 font-semibold hover:underline">
+          Sign In
         </Link>
       </div>
     </div>
   );
-};
-
-export default Login;
-
+}

@@ -162,13 +162,12 @@ const Shop = () => {
             <p className="text-red-800">{error}</p>
           </div>
         )}
-        <div className="mb-8">
-          <h1 className="text-3xl font-serif font-bold mb-4">
-            Explore Our Collection
-          </h1>
-          <p className="text-neutral-600">
-            Discover your signature scent from our premium handcrafted perfumes.
-          </p>
+        <div className="mb-8 overflow-hidden rounded-2xl bg-[#2b1d12] px-6 py-10 text-white shadow-[0_18px_50px_rgba(43,29,18,0.16)] sm:px-10">
+          <p className="text-xs font-semibold tracking-[0.25em] uppercase text-amber-200 mb-3">The Essmey collection</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div><h1 className="text-4xl font-serif font-medium sm:text-5xl">Find the fragrance<br className="hidden sm:block" /> that feels like you.</h1><p className="mt-4 max-w-xl text-sm leading-6 text-stone-300">Every scent is curated by our team and published directly from the Essmey perfume studio.</p></div>
+            <div className="rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-stone-200">{allProducts.length} fragrances to explore</div>
+          </div>
         </div>
 
         {/* Mobile Filter Toggle */}

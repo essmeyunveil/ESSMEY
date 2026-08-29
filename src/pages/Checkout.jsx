@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useCartStore } from "../store/useCartStore";
 import { useNavigate } from "react-router-dom";
 import { openRazorpay } from "../utils/razorpay";
-import { client } from "../utils/sanity";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../utils/firebase";
 import { generateOrderId } from "../utils/orderId";
 import { useAuth } from "../utils/AuthContext";
 import { useToastContext } from "../utils/ToastContext";
@@ -50,7 +51,7 @@ const Checkout = () => {
     0
   );
   const contextError = null;
-  const { user, isLoading } = useAuth();
+  const { user, loading: isLoading } = useAuth();
   const { addToast } = useToastContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -72,7 +73,7 @@ const Checkout = () => {
         },
       });
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, cartItems]);
 
   const userPrefill = user
     ? {
@@ -92,6 +93,17 @@ const Checkout = () => {
     pincode: "",
     notes: "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm((currentForm) => ({
+        ...currentForm,
+        name: currentForm.name || user.displayName || "",
+        email: currentForm.email || user.email || "",
+        phone: currentForm.phone || user.phoneNumber || "",
+      }));
+    }
+  }, [user]);
 
   const [errors, setErrors] = useState({});
 
@@ -151,23 +163,67 @@ const Checkout = () => {
 
     try {
       const customOrderId = generateOrderId();
-      const userDoc = await client.fetch(
-        `*[_type == "user" && _id == $userId][0]`,
-        { userId: user.uid }
-      );
-      if (!userDoc) {
-        await client.create({
-          _type: "user",
-          _id: user.uid,
-          name: user.displayName || form.name,
-          email: user.email || form.email,
-          phone: form.phone,
-        });
+
+      if (db.__isMock) {
+        // Dev mock checkout fallback
+        const mockTransactionId = "pay_mock_" + Math.random().toString(36).substring(2, 11);
+        const orderData = {
+          orderId: customOrderId,
+          totalAmount: cartSubtotal,
+          shippingAddress: `${form.address}, ${form.city}, ${form.state} - ${form.pincode}`,
+          phoneNumber: form.phone,
+          customerName: form.name,
+          email: form.email,
+          city: form.city,
+          state: form.state,
+          deliveryStatus: "confirmed",
+          paymentMethod: "online",
+          paymentStatus: "paid",
+          transactionId: mockTransactionId,
+          items: cartItems.map((item) => ({
+            product: {
+              _id: item._id,
+              name: item.name,
+              price: item.price,
+              image: item.thumbnail || (item.images && item.images[0]) || "",
+            },
+            quantity: item.quantity,
+          })),
+          placedAt: new Date().toISOString(),
+          userId: user.uid,
+        };
+
+        localStorage.setItem(
+          `essmey_mock_order_${customOrderId}`,
+          JSON.stringify(orderData)
+        );
+        clearCart();
+        addToast("Payment successful! Your order has been placed (Mock Mode).", "success");
+        setTimeout(() => {
+          navigate("/thank-you", { state: { orderId: customOrderId } });
+        }, 500);
+        return;
+      }
+
+      try {
+        if (!db.__isMock) {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+              name: user.displayName || form.name,
+              email: user.email || form.email,
+              phone: form.phone,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      } catch (userDocErr) {
+        console.warn("User profile sync skipped (offline mode):", userDocErr.message);
       }
 
       const createOrderRecord = async (transactionId = null) => {
         const orderData = {
-          _type: "order",
           orderId: customOrderId,
           totalAmount: cartSubtotal,
           shippingAddress: `${form.address}, ${form.city}, ${form.state} - ${form.pincode}`,
@@ -181,12 +237,11 @@ const Checkout = () => {
           paymentStatus: "paid",
           transactionId: transactionId,
           items: cartItems.map((item) => ({
-            _key:
-              Math.random().toString(36).substring(2, 11) +
-              Date.now().toString(36),
             product: {
-              _type: "reference",
-              _ref: item._id,
+              _id: item._id,
+              name: item.name,
+              price: item.price,
+              image: item.thumbnail || (item.images && item.images[0]) || "",
             },
             quantity: item.quantity,
           })),
@@ -194,7 +249,17 @@ const Checkout = () => {
           userId: user.uid,
         };
 
-        await client.create(orderData);
+        try {
+          if (!db.__isMock) {
+            await setDoc(doc(db, "orders", customOrderId), orderData);
+          }
+        } catch (firestoreErr) {
+          console.warn("Firestore order sync failed, saving to local backup:", firestoreErr.message);
+        }
+
+        // Save local backup so order details & thank-you page always resolve
+        localStorage.setItem(`essmey_order_${customOrderId}`, JSON.stringify(orderData));
+
         clearCart();
         addToast("Payment successful! Your order has been placed.", "success");
 
@@ -236,13 +301,23 @@ const Checkout = () => {
         },
       };
 
-      await openRazorpay(razorpayOptions)
-        .then(async (response) => {
-          await createOrderRecord(response.razorpay_payment_id);
-        })
-        .catch((error) => {
-          throw new Error(error.message || "Payment failed or was cancelled");
-        });
+      const payment = await openRazorpay(razorpayOptions);
+      const verificationResponse = await fetch("/api/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payment),
+      });
+
+      if (!verificationResponse.ok) {
+        throw new Error("We could not verify your payment. Please contact support.");
+      }
+
+      const verification = await verificationResponse.json();
+      if (!verification.success) {
+        throw new Error(verification.message || "Payment verification failed");
+      }
+
+      await createOrderRecord(payment.razorpay_payment_id);
     } catch (error) {
       console.error("Order error:", error);
       setError(error.message || "Something went wrong. Please try again.");

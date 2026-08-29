@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { client } from "../utils/sanity";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../utils/firebase";
 import ProductCard from "../components/ProductCard";
 import { trackError } from "../utils/analytics";
 
@@ -93,16 +94,57 @@ const ScentFinder = () => {
           return;
         }
 
-        const data = await client.fetch(`*[_type == "product"] {
-          _id, name, description, price, stock, category, featured, bestSeller, new,
-          notes,
-          "images": images[].asset->url
-        }`);
+        if (db.__isMock) {
+          throw new Error("Firebase is running in local MOCK mode.");
+        }
 
-        setAllProducts(data || []);
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const data = [];
+        querySnapshot.forEach((doc) => {
+          data.push({ _id: doc.id, ...doc.data() });
+        });
+
+        if (!data || data.length === 0) {
+          const { products: localProducts } = await import("../utils/sampleData");
+          const formattedLocal = localProducts.map((p) => ({
+            _id: `local-${p.id}`,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            stock: p.stock,
+            category: p.category,
+            featured: p.featured,
+            bestSeller: p.bestSeller,
+            new: p.new,
+            notes: p.notes,
+            images: p.images,
+          }));
+          setAllProducts(formattedLocal);
+          return;
+        }
+
+        setAllProducts(data);
       } catch (error) {
         trackError(error, "ScentFinder.fetchProducts");
-        setAllProducts([]);
+        try {
+          const { products: localProducts } = await import("../utils/sampleData");
+          const formattedLocal = localProducts.map((p) => ({
+            _id: `local-${p.id}`,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            stock: p.stock,
+            category: p.category,
+            featured: p.featured,
+            bestSeller: p.bestSeller,
+            new: p.new,
+            notes: p.notes,
+            images: p.images,
+          }));
+          setAllProducts(formattedLocal);
+        } catch (innerErr) {
+          setAllProducts([]);
+        }
       }
     };
 

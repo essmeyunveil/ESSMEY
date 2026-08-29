@@ -1,5 +1,10 @@
 import { useEffect, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ClerkProvider } from "@clerk/clerk-react";
+
+const CLERK_PUBLISHABLE_KEY =
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
+  "pk_test_ZXNzZW50aWFsLXRlcnJhcGluLTcxLmNsZXJrLmFjY291bnRzLmRldiQ";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +33,7 @@ const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Login = lazy(() => import("./pages/Login"));
+const SignUp = lazy(() => import("./pages/SignUp"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Wishlist = lazy(() => import("./pages/Wishlist"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
@@ -129,6 +135,14 @@ const AnimatedRoutes = () => {
           element={
             <PageTransition>
               <Login />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/sign-up/*"
+          element={
+            <PageTransition>
+              <SignUp />
             </PageTransition>
           }
         />
@@ -272,44 +286,46 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ChakraProvider>
           <ToastProvider>
-            <AuthProvider>
-              <AppProvider>
-                <ScrollToTop />
-                <Toaster
-                  position="top-right"
-                  toastOptions={{
-                    style: {
-                      background: "white",
-                      color: "black",
-                      borderRadius: "8px",
-                      boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-                    },
-                  }}
-                />
-                <div className="flex flex-col min-h-screen">
-                  <Navbar />
-                  <SearchModal />
-                  <main className="flex-grow">
-                    <Suspense
-                      fallback={
-                        <div className="min-h-[60vh] flex flex-col items-center justify-center p-12">
-                          <div className="w-12 h-12 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-4"></div>
-                          <div className="text-sm font-serif text-neutral-400 tracking-widest uppercase animate-pulse">
-                            Essmey
+            <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+              <AuthProvider>
+                <AppProvider>
+                  <ScrollToTop />
+                  <Toaster
+                    position="top-right"
+                    toastOptions={{
+                      style: {
+                        background: "white",
+                        color: "black",
+                        borderRadius: "8px",
+                        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
+                      },
+                    }}
+                  />
+                  <div className="flex flex-col min-h-screen">
+                    <Navbar />
+                    <SearchModal />
+                    <main className="flex-grow">
+                      <Suspense
+                        fallback={
+                          <div className="min-h-[60vh] flex flex-col items-center justify-center p-12">
+                            <div className="w-12 h-12 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin mb-4"></div>
+                            <div className="text-sm font-serif text-neutral-400 tracking-widest uppercase animate-pulse">
+                              Essmey
+                            </div>
                           </div>
-                        </div>
-                      }
-                    >
-                      <AnimatedRoutes />
-                    </Suspense>
-                  </main>
-                  <Footer />
-                </div>
-              </AppProvider>
-            </AuthProvider>
+                        }
+                      >
+                        <AnimatedRoutes />
+                      </Suspense>
+                    </main>
+                    <Footer />
+                  </div>
+                </AppProvider>
+              </AuthProvider>
+            </ClerkProvider>
           </ToastProvider>
         </ChakraProvider>
       </Router>

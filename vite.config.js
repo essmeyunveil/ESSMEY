@@ -1,11 +1,45 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "node:fs/promises";
+import path from "node:path";
+
+const spaFallbackPlugin = () => ({
+  name: "spa-fallback",
+  enforce: "pre",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const url = req.url || "";
+
+      if (
+        req.method !== "GET" ||
+        url.startsWith("/api") ||
+        url.startsWith("/@") ||
+        url.startsWith("/@vite") ||
+        url.startsWith("/src") ||
+        url.startsWith("/node_modules") ||
+        url.includes(".")
+      ) {
+        return next();
+      }
+
+      return fs
+        .readFile(path.resolve(process.cwd(), "index.html"), "utf-8")
+        .then((html) => server.transformIndexHtml(url, html))
+        .then((html) => {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/html");
+          res.end(html);
+        })
+        .catch(() => next());
+    });
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), spaFallbackPlugin()],
   optimizeDeps: {
-    include: ["react", "react-dom", "@sanity/client", "@sanity/image-url"],
+    include: ["react", "react-dom"],
   },
   fs: { strict: false },
   resolve: {
@@ -42,7 +76,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           "react-vendor": ["react", "react-dom"],
-          "sanity-vendor": ["@sanity/client", "@sanity/image-url"],
         },
       },
     },

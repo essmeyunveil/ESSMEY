@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { client } from "../utils/sanity";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { db } from "../utils/firebase";
 import { PortableText } from "@portabletext/react";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -13,13 +14,28 @@ function BlogPost() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const post = await client.fetch(
-          `*[_type == "post" && slug.current == $slug][0]`,
-          { slug }
+        if (db.__isMock) {
+          setLoading(false);
+          return;
+        }
+        const q = query(
+          collection(db, "blogs"),
+          where("slug.current", "==", slug),
+          limit(1)
         );
-        setPost(post);
-      } catch (error) {
-        console.error("Error fetching post:", error);
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const docData = querySnapshot.docs[0].data();
+          const mainImageUrl = docData.mainImage;
+          setPost({
+            _id: querySnapshot.docs[0].id,
+            ...docData,
+            mainImage: mainImageUrl ? { asset: { url: mainImageUrl } } : null,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching post:", err);
+        setError("Could not fetch post details");
       } finally {
         setLoading(false);
       }

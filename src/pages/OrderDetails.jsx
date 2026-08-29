@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { client } from "../utils/sanity";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../utils/firebase";
+import { useAuth } from "../utils/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
+
+const FALLBACK_IMAGE = "/images/product-1.jpg";
 
 const calculateDeliveryStatus = (placedAt) => {
   const placedDate = new Date(placedAt);
@@ -19,13 +23,30 @@ const calculateDeliveryStatus = (placedAt) => {
 export default function OrderDetails() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [order, setOrder] = useState(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // ── Auth guard: redirect to login if not authenticated ──────────────────────
   useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login", {
+        state: {
+          from: `/order/${orderId}`,
+          message: "Please log in to view your order details.",
+        },
+        replace: true,
+      });
+    }
+  }, [authLoading, user, navigate, orderId]);
+
+  // ── Fetch order only once auth has resolved and user is present ─────────────
+  useEffect(() => {
+    if (authLoading || !user) return;
+
     const fetchOrder = async () => {
       try {
         setLoading(true);
@@ -34,39 +55,58 @@ export default function OrderDetails() {
 
         if (!orderId) {
           setError("Invalid order ID.");
-          setLoading(false);
           return;
         }
 
-        const result = await client.fetch(
-          `*[_type == "order" && orderId == $orderId][0]{
-            _id,
-            orderId,
-            deliveryStatus,
-            total,
-            placedAt,
-            items[]{
-              _key,
-              name,
-              price,
-              quantity,
-              "image": asset->url
-            },
-            shippingAddress,
-            customerName,
-            createdAt
-          }`,
-          { orderId }
-        );
+        let data = null;
+        let docId = orderId;
 
-        if (!result) {
+        if (!db.__isMock) {
+          try {
+            const docRef = doc(db, "orders", orderId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              data = docSnap.data();
+              docId = docSnap.id;
+            }
+          } catch (dbErr) {
+            console.warn("Firestore fetch error, attempting local storage fallback:", dbErr.message);
+          }
+        }
+
+        // Fallback to local storage if Firestore has not persisted yet
+        if (!data) {
+          const localOrder = localStorage.getItem(`essmey_order_${orderId}`) ||
+            localStorage.getItem(`essmey_mock_order_${orderId}`);
+          if (localOrder) {
+            try {
+              data = JSON.parse(localOrder);
+            } catch (e) {
+              console.error("Failed to parse local order:", e);
+            }
+          }
+        }
+
+        if (!data) {
           setError("Order not found.");
-          setLoading(false);
           return;
         }
+
+        // ── Ownership check: this order must belong to the logged-in user ──────
+        if (data.userId && data.userId !== user.uid) {
+          setError("Order not found.");
+          return;
+        }
+
+        const result = {
+          ...data,
+          _id: docId,
+          total: data.totalAmount || data.total || 0,
+          placedAt: data.placedAt || data.createdAt || new Date().toISOString(),
+        };
 
         setOrder(result);
-        setStatus(calculateDeliveryStatus(result.createdAt || result.placedAt));
+        setStatus(calculateDeliveryStatus(result.placedAt));
       } catch (err) {
         setError("Failed to fetch order details.");
         console.error(err);
@@ -76,9 +116,9 @@ export default function OrderDetails() {
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, authLoading, user]);
 
-  if (loading) return <LoadingSpinner />;
+  if (loading || authLoading) return <LoadingSpinner />;
 
   if (error)
     return (
@@ -125,7 +165,7 @@ export default function OrderDetails() {
                 </div>
                 <div className="font-medium">
                   {new Date(
-                    order.createdAt || order.placedAt
+                    order.placedAt
                   ).toLocaleDateString("en-IN", {
                     year: "numeric",
                     month: "long",
@@ -168,31 +208,37 @@ export default function OrderDetails() {
               <div className="border-t pt-6">
                 <h2 className="text-2xl font-semibold mb-4">Order Items</h2>
                 <div className="space-y-4">
-                  {order.items.map((item) => (
-                    <div
-                      key={item._key}
-                      className="flex items-center gap-4 p-4 bg-neutral-50 rounded-lg shadow-sm"
-                    >
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-20 h-24 object-cover rounded-lg"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium text-lg">{item.name}</p>
-                        <div className="flex justify-between items-center mt-2">
-                          <p className="text-sm text-neutral-600">
-                            Quantity: {item.quantity}
-                          </p>
-                          <p className="font-medium text-amber-600">
-                            ₹{item.price * item.quantity}
-                          </p>
+                  {order.items.map((item) => {
+                    const name = item.product?.name || "Premium Fragrance";
+                    const price = item.product?.price || 0;
+                    const image = item.product?.image || FALLBACK_IMAGE;
+
+                    return (
+                      <div
+                        key={item._key}
+                        className="flex items-center gap-4 p-4 bg-neutral-50 rounded-lg shadow-sm"
+                      >
+                        {image && (
+                          <img
+                            src={image}
+                            alt={name}
+                            className="w-20 h-24 object-cover rounded-lg"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium text-lg">{name}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <p className="text-sm text-neutral-600">
+                              Quantity: {item.quantity}
+                            </p>
+                            <p className="font-medium text-amber-600">
+                              ₹{(price * item.quantity).toFixed(2)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

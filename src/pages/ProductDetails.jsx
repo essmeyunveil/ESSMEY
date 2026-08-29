@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../store/useCartStore";
 import { useWishlistStore } from "../store/useWishlistStore";
-import { client } from "../utils/sanity";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../utils/firebase";
 import { useState, useEffect } from "react";
 import {
   ShoppingBagIcon,
@@ -12,7 +13,7 @@ import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import ProductReviews from "../components/ProductReviews";
 import AnimatedScentProfile from "../components/AnimatedScentProfile";
 import ProductSkeleton from "../components/ProductSkeleton";
-import AILovedSuggestions from "../components/AILovedSuggestions";
+import { products as localProducts } from "../utils/sampleData";
 
 const FALLBACK_IMAGE = "/images/product-1.jpg";
 
@@ -30,6 +31,7 @@ const ProductDetails = () => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -37,26 +39,44 @@ const ProductDetails = () => {
         setLoading(true);
         setError(null);
 
-        const productResult = await client.fetch(
-          `*[_type == "product" && _id == $id][0]{
-            _id,
-            name,
-            price,
-            stock,
-            description,
-            "image": images[0].asset->url,
-            "images": images[]->asset->url,
-            category,
-            "notes": {
-              "top": notes.top[],
-              "middle": notes.middle[],
-              "base": notes.base[]
-            }
-          }`,
-          { id }
-        );
+        if (db.__isMock) {
+          throw new Error("Firebase is running in local MOCK mode.");
+        }
+
+        const docRef = doc(db, "products", id);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          throw new Error("Product not found");
+        }
+
+        const data = docSnap.data();
+        const productResult = {
+          _id: docSnap.id,
+          ...data,
+          image: data.thumbnail || (data.images && data.images[0]) || "",
+        };
 
         if (!productResult) {
+          const localProduct = localProducts.find(
+            (item) => String(item.id) === String(id) || `local-${item.id}` === id
+          );
+
+          if (localProduct) {
+            setProduct({
+              _id: `local-${localProduct.id}`,
+              name: localProduct.name,
+              price: localProduct.price,
+              stock: localProduct.stock,
+              description: localProduct.description,
+              image: localProduct.image,
+              images: localProduct.images,
+              category: localProduct.category,
+              notes: localProduct.notes,
+            });
+            return;
+          }
+
           throw new Error("Product not found");
         }
 
@@ -157,6 +177,11 @@ const ProductDetails = () => {
     );
   }
 
+  const productImages = product.images?.length ? product.images : [product.image || FALLBACK_IMAGE];
+  const saving = Number(product.mrp) > Number(product.price)
+    ? Math.round(((Number(product.mrp) - Number(product.price)) / Number(product.mrp)) * 100)
+    : 0;
+
   return (
     <div className="pt-24 pb-16">
       <div className="container-custom">
@@ -170,25 +195,29 @@ const ProductDetails = () => {
           <div className="flex-1">
             <div className="relative">
               <img
-                src={product.image || FALLBACK_IMAGE}
+                src={productImages[activeImage] || FALLBACK_IMAGE}
                 alt={product.name}
                 className="w-full h-[500px] object-cover rounded-lg"
                 onError={(e) => {
                   e.target.src = FALLBACK_IMAGE;
                 }}
               />
+              {product.new && <span className="absolute top-4 left-4 rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase shadow-sm">New arrival</span>}
             </div>
+            {productImages.length > 1 && <div className="flex gap-3 mt-4 overflow-x-auto">{productImages.map((image, index) => <button type="button" key={image} onClick={() => setActiveImage(index)} className={`h-20 w-16 shrink-0 overflow-hidden rounded-md border-2 ${activeImage === index ? "border-amber-700" : "border-transparent"}`}><img src={image} alt={`${product.name} view ${index + 1}`} className="h-full w-full object-cover" /></button>)}</div>}
           </div>
 
           {/* Product Info */}
           <div className="flex-1 space-y-8">
             <div>
-              <h1 className="text-3xl font-serif font-bold mb-4">
+              <p className="text-xs font-semibold tracking-[0.22em] uppercase text-amber-700 mb-3">{product.brand || "Essmey"}{product.concentration ? ` · ${product.concentration}` : ""}</p>
+              <h1 className="text-3xl font-serif font-bold mb-3">
                 {product.name}
               </h1>
-              <p className="text-lg text-amber-600 font-semibold mb-6">
-                ₹{product.price?.toFixed(2)}
+              <p className="text-2xl text-neutral-900 font-semibold mb-2">
+                ₹{product.price?.toFixed(2)} {product.mrp && Number(product.mrp) > Number(product.price) && <><span className="ml-2 text-base font-normal text-neutral-400 line-through">₹{Number(product.mrp).toFixed(2)}</span>{saving > 0 && <span className="ml-2 text-sm font-semibold text-emerald-700">Save {saving}%</span>}</>}
               </p>
+              <p className="text-sm text-neutral-500 mb-6">{product.volume || "50 ml"} · In stock: {product.stock ?? 0}</p>
 
               <div className="flex items-center gap-4 mb-8">
                 <button
@@ -282,8 +311,6 @@ const ProductDetails = () => {
         {/* Render Product Reviews */}
         <ProductReviews productId={product._id} />
 
-        {/* AI Recommendations */}
-        <AILovedSuggestions currentProduct={product} />
       </div>
     </div>
   );
