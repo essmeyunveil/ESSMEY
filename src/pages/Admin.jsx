@@ -314,12 +314,16 @@ const NewProduct = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [imageFile, setImageFile] = useState(null);
+  const [additionalImages, setAdditionalImages] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
-    category: "women",
+    category: "unisex",
     price: "",
     description: "",
-    stock: "",
+    stock: "15",
+    topNotes: "Bergamot, Black Currant, Pink Pepper",
+    middleNotes: "Jasmine, Rose, Ylang-Ylang",
+    baseNotes: "Vanilla, Amber, Patchouli",
     featured: false,
     bestSeller: false,
     new: true,
@@ -340,6 +344,24 @@ const NewProduct = () => {
     }
   };
 
+  const handleAdditionalImages = (e) => {
+    if (e.target.files) {
+      setAdditionalImages(Array.from(e.target.files));
+    }
+  };
+
+  const parseNotes = () => ({
+    top: formData.topNotes
+      ? formData.topNotes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["Bergamot"],
+    middle: formData.middleNotes
+      ? formData.middleNotes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["Jasmine", "Rose"],
+    base: formData.baseNotes
+      ? formData.baseNotes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["Vanilla", "Amber"],
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!imageFile) {
@@ -348,40 +370,52 @@ const NewProduct = () => {
     }
     setLoading(true);
     try {
+      const parsedNotes = parseNotes();
+      const productSlug = formData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
       if (db.__isMock) {
-        const productSlug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
         const localSaved = localStorage.getItem("essmey_mock_products_v2");
         const list = localSaved ? JSON.parse(localSaved) : [];
-        const mockImg = "/images/product-placeholder.jpg";
-        
+        const mockImg = URL.createObjectURL(imageFile);
+        const extraImgs = additionalImages.map((f) => URL.createObjectURL(f));
+        const allImgs = [mockImg, ...extraImgs];
+
         const newProduct = {
           _id: `local-custom-${Date.now()}`,
           name: formData.name,
           slug: productSlug,
           price: Number(formData.price),
-          mrp: Number(formData.price),
+          mrp: Math.round(Number(formData.price) * 1.3),
           description: formData.description,
           category: formData.category,
           stock: Number(formData.stock),
+          notes: parsedNotes,
           featured: formData.featured,
           bestSeller: formData.bestSeller,
           new: formData.new,
           image: mockImg,
-          images: [mockImg],
+          images: allImgs,
           thumbnail: mockImg,
         };
 
         list.push(newProduct);
         localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
         queryClient.invalidateQueries({ queryKey: ["products"] });
-        alert("Product created successfully! (Local Mock Mode)");
+        alert("Product created successfully with Scent Profile!");
         setImageFile(null);
+        setAdditionalImages([]);
         setFormData({
           name: "",
-          category: "women",
+          category: "unisex",
           price: "",
           description: "",
-          stock: "",
+          stock: "15",
+          topNotes: "Bergamot, Black Currant, Pink Pepper",
+          middleNotes: "Jasmine, Rose, Ylang-Ylang",
+          baseNotes: "Vanilla, Amber, Patchouli",
           featured: false,
           bestSeller: false,
           new: true,
@@ -390,15 +424,28 @@ const NewProduct = () => {
         return;
       }
 
-      const productSlug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
-      // 1. Upload image to Firebase Storage
+      // 1. Upload main image to Firebase Storage
       const extension = imageFile.name.split(".").pop();
-      const imageRef = ref(storage, `products/${productSlug}/image-1-${Date.now()}.${extension}`);
+      const imageRef = ref(
+        storage,
+        `products/${productSlug}/image-1-${Date.now()}.${extension}`
+      );
       await uploadBytes(imageRef, imageFile);
-      const url = await getDownloadURL(imageRef);
+      const mainUrl = await getDownloadURL(imageRef);
 
-      // 2. Create product with the newly uploaded image
+      const uploadedImages = [mainUrl];
+      for (let i = 0; i < additionalImages.length; i++) {
+        const ext = additionalImages[i].name.split(".").pop();
+        const extraRef = ref(
+          storage,
+          `products/${productSlug}/image-${i + 2}-${Date.now()}.${ext}`
+        );
+        await uploadBytes(extraRef, additionalImages[i]);
+        const extraUrl = await getDownloadURL(extraRef);
+        uploadedImages.push(extraUrl);
+      }
+
+      // 2. Create product in Firestore
       await setDoc(doc(db, "products", productSlug), {
         name: formData.name,
         slug: productSlug,
@@ -406,34 +453,37 @@ const NewProduct = () => {
         description: formData.description,
         category: formData.category,
         stock: Number(formData.stock),
+        notes: parsedNotes,
         featured: formData.featured,
         bestSeller: formData.bestSeller,
         new: formData.new,
-        image: url,
-        images: [url],
-        thumbnail: url,
+        image: mainUrl,
+        images: uploadedImages,
+        thumbnail: mainUrl,
       });
 
-      // Invalidate React Query cache so the new product shows up instantly on the live website
       queryClient.invalidateQueries({ queryKey: ["products"] });
-
-      // Reset form on success
-      alert("Product created successfully! It is now live on the website.");
+      alert("Product created successfully! Scent notes and images are live.");
       setImageFile(null);
+      setAdditionalImages([]);
       const fileInput = document.getElementById("productImage");
       if (fileInput) fileInput.value = "";
       setFormData({
         name: "",
-        category: "women",
+        category: "unisex",
         price: "",
         description: "",
-        stock: "",
+        stock: "15",
+        topNotes: "Bergamot, Black Currant, Pink Pepper",
+        middleNotes: "Jasmine, Rose, Ylang-Ylang",
+        baseNotes: "Vanilla, Amber, Patchouli",
         featured: false,
         bestSeller: false,
         new: true,
       });
     } catch (error) {
-      console.error("Failed to create product. Please try again.", error);
+      console.error("Failed to create product:", error);
+      alert("Failed to create product: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -546,23 +596,92 @@ const NewProduct = () => {
           ></textarea>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">
-            Product Image / Take Photo <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="productImage"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleImageChange}
-            required
-            className="w-full border border-neutral-300 p-3 focus:border-black outline-none bg-neutral-50"
-          />
-          <p className="text-xs text-neutral-500 mt-1">
-            Snap a photo directly from your mobile camera to upload to your
-            store.
+        {/* Scent Profile Notes */}
+        <div className="mb-6 border border-amber-200 bg-amber-50/40 p-5 rounded-sm">
+          <h3 className="text-base font-serif font-medium text-stone-900 mb-2">
+            Scent Profile Notes
+          </h3>
+          <p className="text-xs text-stone-500 mb-4">
+            Enter notes separated by commas (e.g. <i>Bergamot, Black Currant, Pink Pepper</i>). These will dynamically animate on the product page.
           </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Top Notes (5–15 min)
+              </label>
+              <input
+                type="text"
+                name="topNotes"
+                value={formData.topNotes}
+                onChange={handleChange}
+                placeholder="Bergamot, Pink Pepper"
+                className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Heart Notes (20–60 min)
+              </label>
+              <input
+                type="text"
+                name="middleNotes"
+                value={formData.middleNotes}
+                onChange={handleChange}
+                placeholder="Jasmine, Rose, Ylang-Ylang"
+                className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Base Notes (6+ hours)
+              </label>
+              <input
+                type="text"
+                name="baseNotes"
+                value={formData.baseNotes}
+                onChange={handleChange}
+                placeholder="Vanilla, Amber, Patchouli"
+                className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Primary Product Image <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="productImage"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageChange}
+              required
+              className="w-full border border-neutral-300 p-3 focus:border-black outline-none bg-neutral-50"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              Main bottle cover image displayed across the store.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Additional Gallery Images (Optional)
+            </label>
+            <input
+              id="additionalImages"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleAdditionalImages}
+              className="w-full border border-neutral-300 p-3 focus:border-black outline-none bg-neutral-50"
+            />
+            <p className="text-xs text-neutral-500 mt-1">
+              Select 1–4 extra photos for the interactive product gallery carousel.
+            </p>
+          </div>
         </div>
 
         <div className="mb-6">
@@ -618,6 +737,7 @@ const EditProduct = () => {
   const queryClient = useQueryClient();
   const { data: allProducts = [] } = useProducts();
   const [imageFile, setImageFile] = useState(null);
+  const [additionalImages, setAdditionalImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(null);
 
@@ -647,12 +767,25 @@ const EditProduct = () => {
     }
 
     if (product) {
+      const topN = Array.isArray(product.notes?.top)
+        ? product.notes.top.join(", ")
+        : "Bergamot, Black Currant, Pink Pepper";
+      const midN = Array.isArray(product.notes?.middle)
+        ? product.notes.middle.join(", ")
+        : "Jasmine, Rose, Ylang-Ylang";
+      const baseN = Array.isArray(product.notes?.base)
+        ? product.notes.base.join(", ")
+        : "Vanilla, Amber, Patchouli";
+
       setFormData({
         name: product.name || "",
         category: product.category || "unisex",
         price: product.price || "",
         description: product.description || "",
         stock: product.stock || 0,
+        topNotes: topN,
+        middleNotes: midN,
+        baseNotes: baseN,
         featured: product.featured || false,
         bestSeller: product.bestSeller || false,
         new: product.new || false,
@@ -674,17 +807,43 @@ const EditProduct = () => {
     }
   };
 
+  const handleAdditionalImages = (e) => {
+    if (e.target.files) {
+      setAdditionalImages(Array.from(e.target.files));
+    }
+  };
+
+  const parseNotes = () => ({
+    top: formData.topNotes
+      ? formData.topNotes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["Bergamot"],
+    middle: formData.middleNotes
+      ? formData.middleNotes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["Jasmine", "Rose"],
+    base: formData.baseNotes
+      ? formData.baseNotes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["Vanilla", "Amber"],
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const parsedNotes = parseNotes();
+
       if (db.__isMock) {
         const localSaved = localStorage.getItem("essmey_mock_products_v2");
         if (localSaved) {
           const list = JSON.parse(localSaved);
-          const index = list.findIndex((p) => p._id === id);
+          const index = list.findIndex(
+            (p) => String(p._id) === String(id) || String(p.id) === String(id) || p.slug === id
+          );
           if (index !== -1) {
             const product = list[index];
+            const mockImg = imageFile ? URL.createObjectURL(imageFile) : product.image;
+            const extraImgs = additionalImages.map((f) => URL.createObjectURL(f));
+            const allImgs = extraImgs.length ? [mockImg, ...extraImgs] : product.images || [mockImg];
+
             list[index] = {
               ...product,
               name: formData.name,
@@ -692,6 +851,10 @@ const EditProduct = () => {
               description: formData.description,
               category: formData.category,
               stock: Number(formData.stock),
+              notes: parsedNotes,
+              image: mockImg,
+              images: allImgs,
+              thumbnail: mockImg,
               featured: formData.featured,
               bestSeller: formData.bestSeller,
               new: formData.new,
@@ -707,7 +870,12 @@ const EditProduct = () => {
       }
 
       const product = allProducts.find((p) => p._id === id);
-      const productSlug = product?.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const productSlug =
+        product?.slug ||
+        formData.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
 
       let updatePayload = {
         name: formData.name,
@@ -715,6 +883,7 @@ const EditProduct = () => {
         description: formData.description,
         category: formData.category,
         stock: Number(formData.stock),
+        notes: parsedNotes,
         featured: formData.featured,
         bestSeller: formData.bestSeller,
         new: formData.new,
@@ -722,10 +891,13 @@ const EditProduct = () => {
 
       if (imageFile) {
         const extension = imageFile.name.split(".").pop();
-        const imageRef = ref(storage, `products/${productSlug}/image-1-${Date.now()}.${extension}`);
+        const imageRef = ref(
+          storage,
+          `products/${productSlug}/image-1-${Date.now()}.${extension}`
+        );
         await uploadBytes(imageRef, imageFile);
         const url = await getDownloadURL(imageRef);
-        
+
         updatePayload.image = url;
         updatePayload.images = [url];
         updatePayload.thumbnail = url;
@@ -823,16 +995,81 @@ const EditProduct = () => {
             required
           ></textarea>
         </div>
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">
-            New Image (Optional)
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="w-full border border-neutral-300 p-3 bg-neutral-50"
-          />
+        {/* Scent Profile Notes */}
+        <div className="mb-6 border border-amber-200 bg-amber-50/40 p-5 rounded-sm">
+          <h3 className="text-base font-serif font-medium text-stone-900 mb-2">
+            Scent Profile Notes
+          </h3>
+          <p className="text-xs text-stone-500 mb-4">
+            Enter notes separated by commas. These will dynamically update the fragrance pyramid.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Top Notes (5–15 min)
+              </label>
+              <input
+                type="text"
+                name="topNotes"
+                value={formData.topNotes}
+                onChange={handleChange}
+                placeholder="Bergamot, Pink Pepper"
+                className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Heart Notes (20–60 min)
+              </label>
+              <input
+                type="text"
+                name="middleNotes"
+                value={formData.middleNotes}
+                onChange={handleChange}
+                placeholder="Jasmine, Rose, Ylang-Ylang"
+                className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Base Notes (6+ hours)
+              </label>
+              <input
+                type="text"
+                name="baseNotes"
+                value={formData.baseNotes}
+                onChange={handleChange}
+                placeholder="Vanilla, Amber, Patchouli"
+                className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Replace Primary Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="w-full border border-neutral-300 p-3 bg-neutral-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Add Gallery Images (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleAdditionalImages}
+              className="w-full border border-neutral-300 p-3 bg-neutral-50"
+            />
+          </div>
         </div>
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">Features</label>
