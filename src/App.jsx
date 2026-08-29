@@ -2,9 +2,14 @@ import { useEffect, lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ClerkProvider } from "@clerk/clerk-react";
 
+const rawClerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim();
+const VALID_FALLBACK_CLERK_KEY =
+  "pk_test_YXNzdXJlZC1yZWluZGVlci02MzA1LmNsZXJrLmFjY291bnRzLmRldiQ";
+
 const CLERK_PUBLISHABLE_KEY =
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
-  "pk_test_ZXNzZW50aWFsLXRlcnJhcGluLTcxLmNsZXJrLmFjY291bnRzLmRldiQ";
+  rawClerkKey && rawClerkKey.startsWith("pk_") && rawClerkKey.length > 50
+    ? rawClerkKey
+    : VALID_FALLBACK_CLERK_KEY;
 
 const queryClient = new QueryClient({
   defaultOptions: {
