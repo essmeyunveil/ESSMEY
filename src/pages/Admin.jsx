@@ -12,7 +12,6 @@ import { useProducts } from "../features/products/useProducts";
 import toast from "react-hot-toast";
 import { useAuth } from "../utils/AuthContext";
 import { getImageUrl } from "../utils/sanity";
-import Migrate from "./Migrate";
 import { db, storage } from "../utils/firebase";
 import { doc, setDoc, addDoc, collection, updateDoc, deleteDoc, getDocs, query, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -1274,7 +1273,6 @@ const AdminLayout = ({ children }) => {
               <Route path="products/edit/:id" element={<EditProduct />} />
               <Route path="orders" element={<OrdersList />} />
               <Route path="stats" element={<Stats />} />
-              <Route path="migrate" element={<Migrate />} />
             </Routes>
           </div>
         </div>
