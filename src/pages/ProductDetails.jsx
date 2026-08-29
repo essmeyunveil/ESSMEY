@@ -130,6 +130,18 @@ const ProductDetails = () => {
     };
   }, [id]);
 
+  const availableSizes =
+    product.sizes && product.sizes.length > 0
+      ? product.sizes
+      : ["2 ml", "5 ml", "50 ml", "100 ml"];
+  const [selectedSize, setSelectedSize] = useState(availableSizes[0] || "50 ml");
+
+  useEffect(() => {
+    if (product.sizes?.length) {
+      setSelectedSize(product.sizes[0]);
+    }
+  }, [product]);
+
   const handleWishlistClick = (e) => {
     try {
       e.preventDefault();
@@ -157,11 +169,10 @@ const ProductDetails = () => {
       return;
     }
     try {
-      addToCart(product, quantity);
+      addToCart(product, quantity, selectedSize);
       if (shouldNavigate) {
         navigate("/checkout");
       }
-      // console.log(`${product.name} added to cart!`);
     } catch (error) {
       console.error("Failed to add to cart", error);
     }
@@ -180,14 +191,12 @@ const ProductDetails = () => {
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-        // console.log("Shared successfully");
       } catch (err) {
         console.error("Error sharing:", err);
       }
     } else if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(shareData.url);
-        // addToast("Link copied to clipboard");
       } catch (err) {
         console.error("Failed to copy link:", err);
       }
@@ -233,14 +242,29 @@ const ProductDetails = () => {
               <img
                 src={productImages[activeImage] || FALLBACK_IMAGE}
                 alt={product.name}
-                className="w-full h-[500px] object-cover rounded-lg"
+                className="w-full h-[500px] object-cover rounded-lg shadow-sm"
                 onError={(e) => {
                   e.target.src = FALLBACK_IMAGE;
                 }}
               />
               {product.new && <span className="absolute top-4 left-4 rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase shadow-sm">New arrival</span>}
             </div>
-            {productImages.length > 1 && <div className="flex gap-3 mt-4 overflow-x-auto">{productImages.map((image, index) => <button type="button" key={image} onClick={() => setActiveImage(index)} className={`h-20 w-16 shrink-0 overflow-hidden rounded-md border-2 ${activeImage === index ? "border-amber-700" : "border-transparent"}`}><img src={image} alt={`${product.name} view ${index + 1}`} className="h-full w-full object-cover" /></button>)}</div>}
+            {productImages.length > 1 && (
+              <div className="flex gap-3 mt-4 overflow-x-auto pb-2">
+                {productImages.map((image, index) => (
+                  <button
+                    type="button"
+                    key={image + index}
+                    onClick={() => setActiveImage(index)}
+                    className={`h-20 w-16 shrink-0 overflow-hidden rounded-md border-2 transition-all ${
+                      activeImage === index ? "border-amber-700 shadow-md scale-105" : "border-transparent opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={image} alt={`${product.name} view ${index + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -253,7 +277,7 @@ const ProductDetails = () => {
               <p className="text-2xl text-neutral-900 font-semibold mb-2">
                 ₹{product.price?.toFixed(2)} {product.mrp && Number(product.mrp) > Number(product.price) && <><span className="ml-2 text-base font-normal text-neutral-400 line-through">₹{Number(product.mrp).toFixed(2)}</span>{saving > 0 && <span className="ml-2 text-sm font-semibold text-emerald-700">Save {saving}%</span>}</>}
               </p>
-              <p className="text-sm text-neutral-500 mb-6">{product.volume || "50 ml"} · In stock: {product.stock ?? 0}</p>
+              <p className="text-sm text-neutral-500 mb-6">{selectedSize} · In stock: {product.stock ?? 0}</p>
 
               <div className="flex items-center gap-4 mb-8">
                 <button
@@ -273,6 +297,36 @@ const ProductDetails = () => {
                   <ShareIcon className="h-6 w-6 text-black" />
                 </button>
               </div>
+
+              {/* Volume / Size Selector */}
+              {availableSizes && availableSizes.length > 0 && (
+                <div className="mb-6 bg-stone-50 p-4 rounded-xl border border-stone-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-stone-800">
+                      Choose Size / Volume:
+                    </span>
+                    <span className="text-xs text-amber-800 font-medium bg-amber-100/60 px-2 py-0.5 rounded">
+                      Selected: {selectedSize}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {availableSizes.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-4 py-2 text-xs font-medium rounded-lg border transition-all ${
+                          selectedSize === size
+                            ? "bg-stone-900 text-amber-100 border-stone-900 shadow-sm"
+                            : "bg-white text-stone-700 border-stone-300 hover:border-stone-400 hover:bg-stone-100/50"
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4 mb-8">
                 <div className="flex items-center gap-4">

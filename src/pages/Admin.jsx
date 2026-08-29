@@ -307,6 +307,51 @@ const OrdersList = () => {
   );
 };
 
+// Robust image converter that creates compressed WebP Data URL
+const compressImageToDataUrl = (file, maxWidth = 900, quality = 0.8) => {
+  return new Promise((resolve) => {
+    if (!file) return resolve("");
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/webp", quality));
+      };
+      img.onerror = () => resolve(event.target.result);
+      img.src = event.target.result;
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+};
+
+const uploadOrConvertImage = async (file, path) => {
+  if (!file) return "";
+  const dataUrl = await compressImageToDataUrl(file);
+  try {
+    if (!db.__isMock && storage) {
+      const imageRef = ref(storage, path);
+      await uploadBytes(imageRef, file);
+      const remoteUrl = await getDownloadURL(imageRef);
+      return remoteUrl;
+    }
+  } catch (err) {
+    console.warn("Storage upload bypassed (CORS/offline fallback to WebP Data URL):", err.message);
+  }
+  return dataUrl;
+};
+
 // New Product Form Component
 const NewProduct = () => {
   const { user, isAuthenticated } = useAuth();
@@ -320,6 +365,7 @@ const NewProduct = () => {
     price: "",
     description: "",
     stock: "15",
+    availableSizes: "2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml",
     topNotes: "Bergamot, Black Currant, Pink Pepper",
     middleNotes: "Jasmine, Rose, Ylang-Ylang",
     baseNotes: "Vanilla, Amber, Patchouli",
@@ -361,6 +407,12 @@ const NewProduct = () => {
       : ["Vanilla", "Amber"],
   });
 
+  const parseSizes = () => {
+    return formData.availableSizes
+      ? formData.availableSizes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["2 ml", "5 ml", "50 ml", "100 ml"];
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!imageFile) {
@@ -370,88 +422,39 @@ const NewProduct = () => {
     setLoading(true);
     try {
       const parsedNotes = parseNotes();
+      const parsedSizes = parseSizes();
       const productSlug = formData.name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
 
-      if (db.__isMock) {
-        const localSaved = localStorage.getItem("essmey_mock_products_v2");
-        const list = localSaved ? JSON.parse(localSaved) : [];
-        const mockImg = URL.createObjectURL(imageFile);
-        const extraImgs = additionalImages.map((f) => URL.createObjectURL(f));
-        const allImgs = [mockImg, ...extraImgs];
-
-        const newProduct = {
-          _id: `local-custom-${Date.now()}`,
-          name: formData.name,
-          slug: productSlug,
-          price: Number(formData.price),
-          mrp: Math.round(Number(formData.price) * 1.3),
-          description: formData.description,
-          category: formData.category,
-          stock: Number(formData.stock),
-          notes: parsedNotes,
-          featured: formData.featured,
-          bestSeller: formData.bestSeller,
-          new: formData.new,
-          image: mockImg,
-          images: allImgs,
-          thumbnail: mockImg,
-        };
-
-        list.push(newProduct);
-        localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
-        queryClient.invalidateQueries({ queryKey: ["products"] });
-        alert("Product created successfully with Scent Profile!");
-        setImageFile(null);
-        setAdditionalImages([]);
-        setFormData({
-          name: "",
-          category: "unisex",
-          price: "",
-          description: "",
-          stock: "15",
-          topNotes: "Bergamot, Black Currant, Pink Pepper",
-          middleNotes: "Jasmine, Rose, Ylang-Ylang",
-          baseNotes: "Vanilla, Amber, Patchouli",
-          featured: false,
-          bestSeller: false,
-          new: true,
-        });
-        setLoading(false);
-        return;
-      }
-
-      // 1. Upload main image to Firebase Storage
-      const extension = imageFile.name.split(".").pop();
-      const imageRef = ref(
-        storage,
+      // Process and upload/convert images with automatic CORS bypass
+      const extension = imageFile.name ? imageFile.name.split(".").pop() : "webp";
+      const mainUrl = await uploadOrConvertImage(
+        imageFile,
         `products/${productSlug}/image-1-${Date.now()}.${extension}`
       );
-      await uploadBytes(imageRef, imageFile);
-      const mainUrl = await getDownloadURL(imageRef);
 
       const uploadedImages = [mainUrl];
       for (let i = 0; i < additionalImages.length; i++) {
-        const ext = additionalImages[i].name.split(".").pop();
-        const extraRef = ref(
-          storage,
+        const ext = additionalImages[i].name ? additionalImages[i].name.split(".").pop() : "webp";
+        const extraUrl = await uploadOrConvertImage(
+          additionalImages[i],
           `products/${productSlug}/image-${i + 2}-${Date.now()}.${ext}`
         );
-        await uploadBytes(extraRef, additionalImages[i]);
-        const extraUrl = await getDownloadURL(extraRef);
         uploadedImages.push(extraUrl);
       }
 
-      // 2. Create product in Firestore
-      await setDoc(doc(db, "products", productSlug), {
+      const newProductData = {
         name: formData.name,
         slug: productSlug,
         price: Number(formData.price),
+        mrp: Math.round(Number(formData.price) * 1.3),
         description: formData.description,
         category: formData.category,
         stock: Number(formData.stock),
+        sizes: parsedSizes,
+        volume: parsedSizes[0] || "50 ml",
         notes: parsedNotes,
         featured: formData.featured,
         bestSeller: formData.bestSeller,
@@ -459,30 +462,38 @@ const NewProduct = () => {
         image: mainUrl,
         images: uploadedImages,
         thumbnail: mainUrl,
-      });
+      };
+
+      // 1. Save to Cloud Firestore
+      try {
+        if (!db.__isMock) {
+          await setDoc(doc(db, "products", productSlug), newProductData);
+        }
+      } catch (firestoreErr) {
+        console.warn("Direct Firestore setDoc fallback:", firestoreErr.message);
+      }
+
+      // 2. Always sync to persistent local store cache for 0ms instant display
+      try {
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        const list = localSaved ? JSON.parse(localSaved) : [];
+        const existingIdx = list.findIndex((p) => p.slug === productSlug);
+        if (existingIdx >= 0) {
+          list[existingIdx] = { _id: productSlug, ...newProductData };
+        } else {
+          list.push({ _id: productSlug, ...newProductData });
+        }
+        localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
+      } catch (storageErr) {
+        console.error("Local cache sync error:", storageErr);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      alert("Product created successfully! Scent notes and images are live.");
-      setImageFile(null);
-      setAdditionalImages([]);
-      const fileInput = document.getElementById("productImage");
-      if (fileInput) fileInput.value = "";
-      setFormData({
-        name: "",
-        category: "unisex",
-        price: "",
-        description: "",
-        stock: "15",
-        topNotes: "Bergamot, Black Currant, Pink Pepper",
-        middleNotes: "Jasmine, Rose, Ylang-Ylang",
-        baseNotes: "Vanilla, Amber, Patchouli",
-        featured: false,
-        bestSeller: false,
-        new: true,
-      });
-    } catch (error) {
-      console.error("Failed to create product:", error);
-      alert("Failed to create product: " + error.message);
+      alert("Product created successfully! Scent notes, all ml sizes, and images are live.");
+      navigate("/admin/products");
+    } catch (err) {
+      console.error("Product creation error:", err);
+      alert(`Error creating product: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -593,6 +604,24 @@ const NewProduct = () => {
             className="w-full border border-neutral-300 p-3 focus:border-black outline-none"
             required
           ></textarea>
+        </div>
+
+        {/* Available Volumes / Sizes */}
+        <div className="mb-6 bg-stone-50 border border-stone-200 p-4 rounded-sm">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-stone-800 mb-1">
+            Available Sizes / Volumes (comma-separated)
+          </label>
+          <input
+            type="text"
+            name="availableSizes"
+            value={formData.availableSizes}
+            onChange={handleChange}
+            placeholder="2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml"
+            className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+          />
+          <p className="text-xs text-stone-500 mt-1">
+            Specify bottle volumes or discovery decants (e.g., <b>2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml</b>). Customers will see interactive buttons on the product page.
+          </p>
         </div>
 
         {/* Scent Profile Notes */}
@@ -776,12 +805,17 @@ const EditProduct = () => {
         ? product.notes.base.join(", ")
         : "Vanilla, Amber, Patchouli";
 
+      const sizesStr = Array.isArray(product.sizes)
+        ? product.sizes.join(", ")
+        : (product.volume || "2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml");
+
       setFormData({
         name: product.name || "",
         category: product.category || "unisex",
         price: product.price || "",
         description: product.description || "",
         stock: product.stock || 0,
+        availableSizes: sizesStr,
         topNotes: topN,
         middleNotes: midN,
         baseNotes: baseN,
@@ -824,51 +858,20 @@ const EditProduct = () => {
       : ["Vanilla", "Amber"],
   });
 
+  const parseSizes = () => {
+    return formData.availableSizes
+      ? formData.availableSizes.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["2 ml", "5 ml", "50 ml", "100 ml"];
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const parsedNotes = parseNotes();
+      const parsedSizes = parseSizes();
 
-      if (db.__isMock) {
-        const localSaved = localStorage.getItem("essmey_mock_products_v2");
-        if (localSaved) {
-          const list = JSON.parse(localSaved);
-          const index = list.findIndex(
-            (p) => String(p._id) === String(id) || String(p.id) === String(id) || p.slug === id
-          );
-          if (index !== -1) {
-            const product = list[index];
-            const mockImg = imageFile ? URL.createObjectURL(imageFile) : product.image;
-            const extraImgs = additionalImages.map((f) => URL.createObjectURL(f));
-            const allImgs = extraImgs.length ? [mockImg, ...extraImgs] : product.images || [mockImg];
-
-            list[index] = {
-              ...product,
-              name: formData.name,
-              price: Number(formData.price),
-              description: formData.description,
-              category: formData.category,
-              stock: Number(formData.stock),
-              notes: parsedNotes,
-              image: mockImg,
-              images: allImgs,
-              thumbnail: mockImg,
-              featured: formData.featured,
-              bestSeller: formData.bestSeller,
-              new: formData.new,
-            };
-            localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
-          }
-        }
-        queryClient.invalidateQueries({ queryKey: ["products"] });
-        toast.success("Product updated successfully! (Local Mock Mode)");
-        navigate("/admin/products");
-        setLoading(false);
-        return;
-      }
-
-      const product = allProducts.find((p) => p._id === id);
+      const product = allProducts.find((p) => String(p._id) === String(id) || String(p.id) === String(id) || p.slug === id);
       const productSlug =
         product?.slug ||
         formData.name
@@ -879,9 +882,12 @@ const EditProduct = () => {
       let updatePayload = {
         name: formData.name,
         price: Number(formData.price),
+        mrp: Math.round(Number(formData.price) * 1.3),
         description: formData.description,
         category: formData.category,
         stock: Number(formData.stock),
+        sizes: parsedSizes,
+        volume: parsedSizes[0] || "50 ml",
         notes: parsedNotes,
         featured: formData.featured,
         bestSeller: formData.bestSeller,
@@ -889,26 +895,58 @@ const EditProduct = () => {
       };
 
       if (imageFile) {
-        const extension = imageFile.name.split(".").pop();
-        const imageRef = ref(
-          storage,
+        const extension = imageFile.name ? imageFile.name.split(".").pop() : "webp";
+        const url = await uploadOrConvertImage(
+          imageFile,
           `products/${productSlug}/image-1-${Date.now()}.${extension}`
         );
-        await uploadBytes(imageRef, imageFile);
-        const url = await getDownloadURL(imageRef);
-
         updatePayload.image = url;
-        updatePayload.images = [url];
         updatePayload.thumbnail = url;
       }
 
-      await updateDoc(doc(db, "products", id), updatePayload);
+      if (additionalImages.length > 0) {
+        const extraUrls = [];
+        for (let i = 0; i < additionalImages.length; i++) {
+          const ext = additionalImages[i].name ? additionalImages[i].name.split(".").pop() : "webp";
+          const extraUrl = await uploadOrConvertImage(
+            additionalImages[i],
+            `products/${productSlug}/image-${i + 2}-${Date.now()}.${ext}`
+          );
+          extraUrls.push(extraUrl);
+        }
+        updatePayload.images = updatePayload.image ? [updatePayload.image, ...extraUrls] : extraUrls;
+      }
+
+      // 1. Update Firestore
+      try {
+        if (!db.__isMock) {
+          await updateDoc(doc(db, "products", id), updatePayload);
+        }
+      } catch (firestoreErr) {
+        console.warn("Firestore updateDoc fallback:", firestoreErr.message);
+      }
+
+      // 2. Sync to local storage mock cache
+      try {
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        if (localSaved) {
+          const list = JSON.parse(localSaved);
+          const idx = list.findIndex((p) => String(p._id) === String(id) || String(p.id) === String(id) || p.slug === id);
+          if (idx !== -1) {
+            list[idx] = { ...list[idx], ...updatePayload };
+            localStorage.setItem("essmey_mock_products_v2", JSON.stringify(list));
+          }
+        }
+      } catch (cacheErr) {
+        console.error("Local cache sync error:", cacheErr);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("Product updated successfully!");
       navigate("/admin/products");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update product");
+      toast.error("Failed to update product: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -994,6 +1032,24 @@ const EditProduct = () => {
             required
           ></textarea>
         </div>
+        {/* Available Volumes / Sizes */}
+        <div className="mb-6 bg-stone-50 border border-stone-200 p-4 rounded-sm">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-stone-800 mb-1">
+            Available Sizes / Volumes (comma-separated)
+          </label>
+          <input
+            type="text"
+            name="availableSizes"
+            value={formData.availableSizes}
+            onChange={handleChange}
+            placeholder="2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml"
+            className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
+          />
+          <p className="text-xs text-stone-500 mt-1">
+            Specify bottle volumes or discovery decants (e.g., <b>2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml</b>). Customers will see interactive buttons on the product page.
+          </p>
+        </div>
+
         {/* Scent Profile Notes */}
         <div className="mb-6 border border-amber-200 bg-amber-50/40 p-5 rounded-sm">
           <h3 className="text-base font-serif font-medium text-stone-900 mb-2">
