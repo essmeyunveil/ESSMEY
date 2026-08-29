@@ -1187,8 +1187,15 @@ const AdminLayout = ({ children }) => {
     }
   }, [loading, isAuthenticated, navigate, location.pathname]);
 
-  // Show nothing while Firebase is resolving the auth state
-  if (loading) return null;
+  // Show elegant loading spinner while resolving auth state
+  if (loading) {
+    return (
+      <div className="pt-32 pb-24 min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-serif text-stone-600">Verifying admin credentials...</p>
+      </div>
+    );
+  }
 
   // Block render if not authenticated (navigate will fire via useEffect)
   if (!isAuthenticated) return null;
@@ -1241,16 +1248,6 @@ const AdminLayout = ({ children }) => {
                 }`}
               >
                 Statistics
-              </Link>
-              <Link
-                to="/admin/migrate"
-                className={`block p-4 hover:bg-neutral-50 ${
-                  location.pathname.includes("/admin/migrate")
-                    ? "bg-neutral-100 font-medium"
-                    : ""
-                }`}
-              >
-                Data Migration
               </Link>
               <button
                 onClick={async () => {
