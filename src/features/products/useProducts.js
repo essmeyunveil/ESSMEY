@@ -12,7 +12,7 @@ export const useProducts = () => {
         }
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Firestore timeout")), 1500)
+          setTimeout(() => reject(new Error("Firestore timeout")), 6000)
         );
         const fetchPromise = getDocs(collection(db, "products"));
         const querySnapshot = await Promise.race([fetchPromise, timeoutPromise]);
@@ -22,11 +22,16 @@ export const useProducts = () => {
           productsList.push({ _id: doc.id, ...doc.data() });
         });
 
-        if (productsList.length === 0) {
-          throw new Error("No products found in Firestore");
+        if (productsList.length > 0) {
+          try {
+            localStorage.setItem("essmey_mock_products_v2", JSON.stringify(productsList));
+          } catch (e) {
+            console.error("Failed to update cache with Firestore data:", e);
+          }
+          return productsList;
         }
 
-        return productsList;
+        throw new Error("No products found in Firestore");
       } catch (error) {
         console.warn("Using local storage/sample fallback for products:", error.message);
         
