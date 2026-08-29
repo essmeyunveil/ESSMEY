@@ -11,7 +11,12 @@ export const useProducts = () => {
           throw new Error("Firebase is running in local MOCK mode");
         }
 
-        const querySnapshot = await getDocs(collection(db, "products"));
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Firestore timeout")), 1500)
+        );
+        const fetchPromise = getDocs(collection(db, "products"));
+        const querySnapshot = await Promise.race([fetchPromise, timeoutPromise]);
+
         const productsList = [];
         querySnapshot.forEach((doc) => {
           productsList.push({ _id: doc.id, ...doc.data() });

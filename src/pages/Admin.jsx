@@ -622,11 +622,34 @@ const EditProduct = () => {
   const [formData, setFormData] = useState(null);
 
   useEffect(() => {
-    const product = allProducts.find((p) => p._id === id);
+    let product = allProducts.find(
+      (p) =>
+        String(p._id) === String(id) ||
+        String(p.id) === String(id) ||
+        p.slug === id
+    );
+
+    if (!product) {
+      try {
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        if (localSaved) {
+          const list = JSON.parse(localSaved);
+          product = list.find(
+            (p) =>
+              String(p._id) === String(id) ||
+              String(p.id) === String(id) ||
+              p.slug === id
+          );
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     if (product) {
       setFormData({
         name: product.name || "",
-        category: product.category || "women",
+        category: product.category || "unisex",
         price: product.price || "",
         description: product.description || "",
         stock: product.stock || 0,

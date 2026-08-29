@@ -34,64 +34,100 @@ const ProductDetails = () => {
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    let isMounted = true;
+
+    const resolveProduct = async () => {
+      setError(null);
+
+      // 1. Instant Cache Resolution (0ms delay)
+      let found = null;
+
+      // Check localStorage first
       try {
-        setLoading(true);
-        setError(null);
-
-        if (db.__isMock) {
-          throw new Error("Firebase is running in local MOCK mode.");
-        }
-
-        const docRef = doc(db, "products", id);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) {
-          throw new Error("Product not found");
-        }
-
-        const data = docSnap.data();
-        const productResult = {
-          _id: docSnap.id,
-          ...data,
-          image: data.thumbnail || (data.images && data.images[0]) || "",
-        };
-
-        if (!productResult) {
-          const localProduct = localProducts.find(
-            (item) => String(item.id) === String(id) || `local-${item.id}` === id
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        if (localSaved) {
+          const list = JSON.parse(localSaved);
+          found = list.find(
+            (p) =>
+              String(p._id) === String(id) ||
+              String(p.id) === String(id) ||
+              p.slug === id
           );
+        }
+      } catch (e) {
+        console.warn("Could not read local products storage:", e);
+      }
 
-          if (localProduct) {
-            setProduct({
-              _id: `local-${localProduct.id}`,
-              name: localProduct.name,
-              price: localProduct.price,
-              stock: localProduct.stock,
-              description: localProduct.description,
-              image: localProduct.image,
-              images: localProduct.images,
-              category: localProduct.category,
-              notes: localProduct.notes,
-            });
+      // Check sampleData fallback
+      if (!found && localProducts) {
+        const sample = localProducts.find(
+          (p) =>
+            String(p.id) === String(id) ||
+            `local-${p.id}` === String(id) ||
+            p.slug === id
+        );
+        if (sample) {
+          found = {
+            _id: `local-${sample.id}`,
+            name: sample.name,
+            price: sample.price,
+            stock: sample.stock || 10,
+            description: sample.description,
+            image: sample.image || FALLBACK_IMAGE,
+            images: sample.images || [sample.image || FALLBACK_IMAGE],
+            category: sample.category || "unisex",
+            notes: sample.notes || {
+              top: ["Bergamot"],
+              middle: ["Jasmine"],
+              base: ["Amber"],
+            },
+          };
+        }
+      }
+
+      // If found in local cache, show instantly!
+      if (found && isMounted) {
+        setProduct(found);
+        setLoading(false);
+      }
+
+      // 2. Background Firestore Sync (with 2-second timeout)
+      if (!db.__isMock) {
+        try {
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout")), 2000)
+          );
+          const fetchPromise = getDoc(doc(db, "products", id));
+          const docSnap = await Promise.race([fetchPromise, timeoutPromise]);
+
+          if (docSnap && docSnap.exists && docSnap.exists() && isMounted) {
+            const data = docSnap.data();
+            const remoteProduct = {
+              _id: docSnap.id,
+              ...data,
+              image: data.thumbnail || (data.images && data.images[0]) || FALLBACK_IMAGE,
+              images: data.images?.length ? data.images : [data.thumbnail || FALLBACK_IMAGE],
+            };
+            setProduct(remoteProduct);
+            setLoading(false);
             return;
           }
-
-          throw new Error("Product not found");
+        } catch (remoteErr) {
+          console.warn("Firestore product sync skipped (offline/cached mode):", remoteErr.message);
         }
+      }
 
-        setProduct(productResult);
-      } catch (err) {
-        console.error("Error fetching product:", err);
-        setError(
-          err.message || "Failed to load product data. Please try again later."
-        );
-      } finally {
+      if (!found && isMounted) {
         setLoading(false);
+        setError("Product not found. It may have been moved or removed.");
       }
     };
 
-    fetchProduct();
+    resolveProduct();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const handleWishlistClick = (e) => {
