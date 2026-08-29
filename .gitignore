@@ -49,3 +49,8 @@ products_data.json
 bun.lock
 bun.lockb
 
+# Temporary migration scripts
+src/pages/Migrate.jsx
+Migrate.jsx
+
+
