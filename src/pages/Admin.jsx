@@ -336,20 +336,9 @@ const compressImageToDataUrl = (file, maxWidth = 900, quality = 0.8) => {
   });
 };
 
-const uploadOrConvertImage = async (file, path) => {
+const uploadOrConvertImage = async (file) => {
   if (!file) return "";
-  const dataUrl = await compressImageToDataUrl(file);
-  try {
-    if (!db.__isMock && storage) {
-      const imageRef = ref(storage, path);
-      await uploadBytes(imageRef, file);
-      const remoteUrl = await getDownloadURL(imageRef);
-      return remoteUrl;
-    }
-  } catch (err) {
-    console.warn("Storage upload bypassed (CORS/offline fallback to WebP Data URL):", err.message);
-  }
-  return dataUrl;
+  return await compressImageToDataUrl(file);
 };
 
 // New Product Form Component
@@ -428,20 +417,11 @@ const NewProduct = () => {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
 
-      // Process and upload/convert images with automatic CORS bypass
-      const extension = imageFile.name ? imageFile.name.split(".").pop() : "webp";
-      const mainUrl = await uploadOrConvertImage(
-        imageFile,
-        `products/${productSlug}/image-1-${Date.now()}.${extension}`
-      );
-
+      // Convert images to optimized WebP Data URLs instantly
+      const mainUrl = await uploadOrConvertImage(imageFile);
       const uploadedImages = [mainUrl];
       for (let i = 0; i < additionalImages.length; i++) {
-        const ext = additionalImages[i].name ? additionalImages[i].name.split(".").pop() : "webp";
-        const extraUrl = await uploadOrConvertImage(
-          additionalImages[i],
-          `products/${productSlug}/image-${i + 2}-${Date.now()}.${ext}`
-        );
+        const extraUrl = await uploadOrConvertImage(additionalImages[i]);
         uploadedImages.push(extraUrl);
       }
 
@@ -895,11 +875,7 @@ const EditProduct = () => {
       };
 
       if (imageFile) {
-        const extension = imageFile.name ? imageFile.name.split(".").pop() : "webp";
-        const url = await uploadOrConvertImage(
-          imageFile,
-          `products/${productSlug}/image-1-${Date.now()}.${extension}`
-        );
+        const url = await uploadOrConvertImage(imageFile);
         updatePayload.image = url;
         updatePayload.thumbnail = url;
       }
@@ -907,11 +883,7 @@ const EditProduct = () => {
       if (additionalImages.length > 0) {
         const extraUrls = [];
         for (let i = 0; i < additionalImages.length; i++) {
-          const ext = additionalImages[i].name ? additionalImages[i].name.split(".").pop() : "webp";
-          const extraUrl = await uploadOrConvertImage(
-            additionalImages[i],
-            `products/${productSlug}/image-${i + 2}-${Date.now()}.${ext}`
-          );
+          const extraUrl = await uploadOrConvertImage(additionalImages[i]);
           extraUrls.push(extraUrl);
         }
         updatePayload.images = updatePayload.image ? [updatePayload.image, ...extraUrls] : extraUrls;
