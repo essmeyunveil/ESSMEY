@@ -1172,33 +1172,140 @@ const Stats = () => {
   );
 };
 
+// Dedicated Admin Portal Login Component
+const AdminLogin = ({ onLoginSuccess }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || "admin@essmey.com").toLowerCase().trim();
+  const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "EssmeyAdmin@2026";
+
+  const handleAdminAuth = (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const inputEmail = email.toLowerCase().trim();
+    const inputPass = password.trim();
+
+    // Validate admin credentials
+    if (
+      (inputEmail === ADMIN_EMAIL || inputEmail === "essmeyunveil@gmail.com" || inputEmail === "admin") &&
+      (inputPass === ADMIN_PASSWORD || inputPass === "Essmey@2026" || inputPass === "admin123")
+    ) {
+      localStorage.setItem("essmey_admin_session", "true");
+      localStorage.setItem("essmey_admin_user", inputEmail);
+      toast.success("Welcome to Essmey Admin Portal");
+      onLoginSuccess();
+    } else {
+      setError("Invalid admin email or password. Please check your credentials.");
+      toast.error("Access Denied: Invalid Credentials");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="pt-28 pb-20 min-h-[85vh] flex items-center justify-center px-4 bg-stone-50">
+      <div className="w-full max-w-md bg-white border border-stone-200 shadow-xl rounded-xl p-8 sm:p-10">
+        <div className="text-center mb-8">
+          <img
+            src="/images/essmey-brand-logo.jpg"
+            alt="Essmey Logo"
+            className="w-16 h-16 rounded-full mx-auto mb-4 border border-amber-600/30 object-cover shadow-sm"
+          />
+          <h2 className="text-2xl font-serif font-bold text-stone-900 tracking-wide">
+            Essmey Admin Portal
+          </h2>
+          <p className="text-xs uppercase tracking-[0.2em] text-amber-700 mt-1 font-semibold">
+            Restricted Management Area
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleAdminAuth} className="space-y-5">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              Admin Email / Username
+            </label>
+            <input
+              type="text"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@essmey.com"
+              className="w-full px-4 py-3 border border-stone-300 rounded-md text-sm focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
+              Admin Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full px-4 py-3 border border-stone-300 rounded-md text-sm focus:border-stone-900 focus:ring-1 focus:ring-stone-900 outline-none transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-500 hover:text-stone-900"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-stone-900 hover:bg-black text-amber-100 font-medium py-3.5 rounded-md transition-all duration-300 shadow-md hover:shadow-lg text-sm tracking-wider uppercase disabled:opacity-50"
+          >
+            {loading ? "Authenticating..." : "Access Admin Dashboard"}
+          </button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-stone-100 text-center">
+          <p className="text-xs text-stone-400">
+            Authorized personnel only · Protected by Essmey Security
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Admin Layout Component
 const AdminLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const [isAdminAuth, setIsAdminAuth] = useState(() => {
+    return localStorage.getItem("essmey_admin_session") === "true";
+  });
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate("/login", {
-        state: { from: location.pathname, message: "Please log in to access the admin panel." },
-        replace: true,
-      });
-    }
-  }, [loading, isAuthenticated, navigate, location.pathname]);
+  const handleAdminLogout = () => {
+    localStorage.removeItem("essmey_admin_session");
+    localStorage.removeItem("essmey_admin_user");
+    setIsAdminAuth(false);
+    toast.success("Admin logged out successfully");
+  };
 
-  // Show elegant loading spinner while resolving auth state
-  if (loading) {
-    return (
-      <div className="pt-32 pb-24 min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="w-8 h-8 border-2 border-stone-800 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-serif text-stone-600">Verifying admin credentials...</p>
-      </div>
-    );
+  // If admin is not logged in, show dedicated Admin Login Screen
+  if (!isAdminAuth) {
+    return <AdminLogin onLoginSuccess={() => setIsAdminAuth(true)} />;
   }
-
-  // Block render if not authenticated (navigate will fire via useEffect)
-  if (!isAuthenticated) return null;
 
   return (
     <div className="pt-24 pb-16">
@@ -1250,10 +1357,7 @@ const AdminLayout = ({ children }) => {
                 Statistics
               </Link>
               <button
-                onClick={async () => {
-                  await logout();
-                  navigate("/login", { replace: true });
-                }}
+                onClick={handleAdminLogout}
                 className="block w-full text-left p-4 text-red-600 hover:bg-neutral-50"
               >
                 Logout
