@@ -1,3 +1,12 @@
+// Preload Razorpay checkout script on page mount so payment pops up instantly
+export const preloadRazorpay = () => {
+  if (typeof window === "undefined" || window.Razorpay) return;
+  const script = document.createElement("script");
+  script.src = "https://checkout.razorpay.com/v1/checkout.js";
+  script.async = true;
+  document.body.appendChild(script);
+};
+
 // Simple utility function for Razorpay payment
 export const openRazorpay = (options) => {
   return new Promise((resolve, reject) => {
