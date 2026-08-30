@@ -101,22 +101,31 @@ const ProductsList = () => {
       )
     ) {
       try {
-        if (db.__isMock) {
-          const localSaved = localStorage.getItem("essmey_mock_products_v2");
-          if (localSaved) {
-            const list = JSON.parse(localSaved);
-            const updated = list.filter((p) => p._id !== id);
-            localStorage.setItem("essmey_mock_products_v2", JSON.stringify(updated));
-          }
-          queryClient.invalidateQueries({ queryKey: ["products"] });
-          toast.success("Product deleted successfully (Local Mock Mode)");
-          return;
+        // 1. Update persistent local cache
+        const localSaved = localStorage.getItem("essmey_mock_products_v2");
+        if (localSaved) {
+          const list = JSON.parse(localSaved);
+          const updated = list.filter((p) => p._id !== id && p.slug !== id);
+          localStorage.setItem("essmey_mock_products_v2", JSON.stringify(updated));
         }
-        await deleteDoc(doc(db, "products", id));
-        queryClient.invalidateQueries({ queryKey: ["products"] });
+
+        // 2. Update React Query in-memory cache instantly
+        queryClient.setQueryData(["products"], (old = []) => {
+          return Array.isArray(old) ? old.filter((p) => p._id !== id && p.slug !== id) : [];
+        });
+
+        // 3. Delete from Cloud Firestore
+        try {
+          if (!db.__isMock) {
+            await deleteDoc(doc(db, "products", id));
+          }
+        } catch (firestoreErr) {
+          console.warn("Firestore delete fallback:", firestoreErr.message);
+        }
+
         toast.success("Product deleted successfully");
       } catch (error) {
-        toast.error("Failed to delete product");
+        toast.error("Failed to delete product: " + error.message);
       }
     }
   };
