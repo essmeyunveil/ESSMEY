@@ -34,7 +34,8 @@ const initializeRazorpay = (options, resolve, reject) => {
       amount: options.amount,
       currency: options.currency || "INR",
       name: options.name || "Essmey Perfume",
-      description: options.description || "Payment for your order",
+      description: options.description || "Luxury Fragrance Purchase",
+      image: "/images/essmey-brand-logo.jpg",
       handler: function (response) {
         resolve(response);
       },
@@ -43,10 +44,22 @@ const initializeRazorpay = (options, resolve, reject) => {
         email: options.prefill?.email || "",
         contact: options.prefill?.contact || "",
       },
+      notes: {
+        order_receipt: options.receipt || `order_${Date.now()}`,
+      },
       theme: {
-        color: "#c08c53",
+        color: "#2b1d12",
+        backdrop_color: "rgba(43, 29, 18, 0.6)",
+      },
+      retry: {
+        enabled: true,
+        max_count: 4,
       },
       modal: {
+        backdropclose: false,
+        escape: true,
+        handleback: true,
+        confirm_close: true,
         ondismiss: function () {
           reject(new Error("Payment cancelled by user"));
         },
