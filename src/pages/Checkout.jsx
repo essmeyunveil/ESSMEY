@@ -285,11 +285,12 @@ const Checkout = () => {
           }),
         });
         clearTimeout(timeoutId);
-        if (orderResponse.ok) {
+        const contentType = orderResponse.headers.get("content-type");
+        if (orderResponse.ok && contentType && contentType.includes("application/json")) {
           orderData = await orderResponse.json();
         }
       } catch (err) {
-        console.warn("Server order generation skipped/timed out, using direct checkout:", err.message);
+        console.warn("Direct checkout activated:", err.message);
       }
 
       const razorpayOptions = {
