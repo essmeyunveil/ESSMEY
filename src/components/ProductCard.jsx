@@ -119,6 +119,12 @@ const ProductCard = ({ product }) => {
     }
   };
 
+  const lowestPrice =
+    product.sizeVariants && product.sizeVariants.length > 0
+      ? Math.min(...product.sizeVariants.map((v) => Number(v.price) || product.price))
+      : product.price;
+  const isMultiSized = (product.sizeVariants && product.sizeVariants.length > 1) || (product.sizes && product.sizes.length > 1);
+
   return (
     <div
       className="product-card relative"
@@ -197,8 +203,9 @@ const ProductCard = ({ product }) => {
             </h3>
             <div className="flex justify-between items-end gap-3 mt-3">
               <span className="text-neutral-900 font-semibold">
-                {formatPrice(product.price)}
-                {product.mrp && Number(product.mrp) > Number(product.price) && <span className="ml-2 text-xs font-normal text-neutral-400 line-through">{formatPrice(product.mrp)}</span>}
+                {isMultiSized && <span className="text-xs font-normal text-stone-500 mr-1">From</span>}
+                {formatPrice(lowestPrice)}
+                {product.mrp && Number(product.mrp) > Number(lowestPrice) && <span className="ml-2 text-xs font-normal text-neutral-400 line-through">{formatPrice(product.mrp)}</span>}
               </span>
               {saving > 0 ? <span className="text-xs font-semibold text-emerald-700">Save {saving}%</span> : product.category && <span className="text-xs text-neutral-500 uppercase">{product.category}</span>}
             </div>

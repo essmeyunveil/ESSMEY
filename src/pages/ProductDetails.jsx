@@ -142,6 +142,23 @@ const ProductDetails = () => {
     }
   }, [product]);
 
+  // Size-specific dynamic pricing calculation
+  const activeVariant =
+    product?.sizeVariants?.find((v) => v.size === selectedSize) ||
+    product?.sizePrices?.[selectedSize];
+  const activePrice =
+    activeVariant?.price !== undefined && !isNaN(Number(activeVariant.price))
+      ? Number(activeVariant.price)
+      : Number(product?.price || 199);
+  const activeMrp =
+    activeVariant?.mrp !== undefined && !isNaN(Number(activeVariant.mrp))
+      ? Number(activeVariant.mrp)
+      : Number(product?.mrp || Math.round(activePrice * 1.3));
+  const saving =
+    activeMrp > activePrice
+      ? Math.round(((activeMrp - activePrice) / activeMrp) * 100)
+      : 0;
+
   const handleWishlistClick = (e) => {
     if (!product?._id) return;
     try {
@@ -169,7 +186,7 @@ const ProductDetails = () => {
       return;
     }
     try {
-      addToCart(product, quantity, selectedSize);
+      addToCart(product, quantity, selectedSize, activePrice, activeMrp);
       if (shouldNavigate) {
         navigate("/checkout");
       }
@@ -223,9 +240,6 @@ const ProductDetails = () => {
   }
 
   const productImages = product.images?.length ? product.images : [product.image || FALLBACK_IMAGE];
-  const saving = Number(product.mrp) > Number(product.price)
-    ? Math.round(((Number(product.mrp) - Number(product.price)) / Number(product.mrp)) * 100)
-    : 0;
 
   return (
     <div className="pt-24 pb-16">
@@ -275,7 +289,7 @@ const ProductDetails = () => {
                 {product.name}
               </h1>
               <p className="text-2xl text-neutral-900 font-semibold mb-2">
-                ₹{product.price?.toFixed(2)} {product.mrp && Number(product.mrp) > Number(product.price) && <><span className="ml-2 text-base font-normal text-neutral-400 line-through">₹{Number(product.mrp).toFixed(2)}</span>{saving > 0 && <span className="ml-2 text-sm font-semibold text-emerald-700">Save {saving}%</span>}</>}
+                ₹{activePrice.toFixed(2)} {activeMrp > activePrice && <><span className="ml-2 text-base font-normal text-neutral-400 line-through">₹{activeMrp.toFixed(2)}</span>{saving > 0 && <span className="ml-2 text-sm font-semibold text-emerald-700">Save {saving}%</span>}</>}
               </p>
               <p className="text-sm text-neutral-500 mb-6">{selectedSize} · In stock: {product.stock ?? 0}</p>
 
@@ -298,32 +312,47 @@ const ProductDetails = () => {
                 </button>
               </div>
 
-              {/* Volume / Size Selector */}
+              {/* Volume / Size Selector with Live Pricing */}
               {availableSizes && availableSizes.length > 0 && (
                 <div className="mb-6 bg-stone-50 p-4 rounded-xl border border-stone-200">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-semibold uppercase tracking-wider text-stone-800">
-                      Choose Size / Volume:
+                      Choose Size & Decant Volume:
                     </span>
-                    <span className="text-xs text-amber-800 font-medium bg-amber-100/60 px-2 py-0.5 rounded">
-                      Selected: {selectedSize}
+                    <span className="text-xs text-amber-900 font-semibold bg-amber-100/80 px-2.5 py-0.5 rounded-full">
+                      {selectedSize} — ₹{activePrice}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {availableSizes.map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => setSelectedSize(size)}
-                        className={`px-4 py-2 text-xs font-medium rounded-lg border transition-all ${
-                          selectedSize === size
-                            ? "bg-stone-900 text-amber-100 border-stone-900 shadow-sm"
-                            : "bg-white text-stone-700 border-stone-300 hover:border-stone-400 hover:bg-stone-100/50"
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {availableSizes.map((size) => {
+                      const variant =
+                        product.sizeVariants?.find((v) => v.size === size) ||
+                        product.sizePrices?.[size];
+                      const sizePrice = variant?.price ? Number(variant.price) : null;
+                      const isSelected = selectedSize === size;
+
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => setSelectedSize(size)}
+                          className={`p-2.5 text-left rounded-xl border transition-all flex flex-col justify-between ${
+                            isSelected
+                              ? "bg-[#2b1d12] text-white border-[#2b1d12] shadow-md scale-[1.02]"
+                              : "bg-white text-stone-800 border-stone-300 hover:border-stone-400 hover:bg-stone-100/60"
+                          }`}
+                        >
+                          <span className={`text-xs font-bold ${isSelected ? "text-[#e4c58f]" : "text-stone-900"}`}>
+                            {size}
+                          </span>
+                          {sizePrice !== null && (
+                            <span className={`text-[11px] font-medium mt-0.5 ${isSelected ? "text-stone-200" : "text-stone-500"}`}>
+                              ₹{sizePrice}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

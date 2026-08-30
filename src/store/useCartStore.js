@@ -7,8 +7,11 @@ export const useCartStore = create(
     (set, get) => ({
       items: [],
 
-      addToCart: (product, quantity = 1, size = null) => {
+      addToCart: (product, quantity = 1, size = null, customPrice = null, customMrp = null) => {
         const currentItems = get().items;
+        const itemPrice = customPrice !== null && !isNaN(Number(customPrice)) ? Number(customPrice) : Number(product.price);
+        const itemMrp = customMrp !== null && !isNaN(Number(customMrp)) ? Number(customMrp) : Number(product.mrp || product.price);
+
         const existingItemIndex = currentItems.findIndex(
           (item) => item._id === product._id && item.selectedSize === size
         );
@@ -19,23 +22,26 @@ export const useCartStore = create(
           updatedItems[existingItemIndex].quantity += quantity;
           set({ items: updatedItems });
         } else {
-          // Add new item
+          // Add new item with size-specific pricing
           set({
             items: [
               ...currentItems,
               {
                 ...product,
+                price: itemPrice,
+                mrp: itemMrp,
                 image:
                   product.image ||
-                  (product.images && product.images[0]?.asset?.url) ||
-                  "",
+                  product.thumbnail ||
+                  (product.images && product.images[0]) ||
+                  "/images/product-1.jpg",
                 selectedSize: size,
                 quantity,
               },
             ],
           });
         }
-        toast.success(`${product.name} added to cart!`);
+        toast.success(`${product.name}${size ? ` (${size})` : ""} added to bag!`);
       },
 
       removeFromCart: (productId, size = null) => {

@@ -361,6 +361,111 @@ const uploadOrConvertImage = async (file) => {
   return await compressImageToDataUrl(file);
 };
 
+// Size & Pricing Variant Editor for 2ml, 4ml, 5ml, 10ml, 50ml, 100ml
+const SizeVariantEditor = ({ variants, onChange }) => {
+  const handleUpdate = (index, field, value) => {
+    const next = [...variants];
+    next[index] = { ...next[index], [field]: value };
+    onChange(next);
+  };
+
+  const handleAdd = () => {
+    onChange([...variants, { size: "15 ml", price: "499", mrp: "699" }]);
+  };
+
+  const handleRemove = (index) => {
+    if (variants.length <= 1) {
+      toast.error("At least one size variant is required");
+      return;
+    }
+    onChange(variants.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="mb-8 border border-[#e5ded3] bg-[#faf8f5] p-5 rounded-xl">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="font-serif text-lg font-medium text-[#2b1d12]">
+            Bottle & Decant Sizes (Custom Pricing per ML)
+          </h3>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Set unique selling prices (₹) and MRPs for discovery decants (2ml, 5ml) & full bottles (50ml, 100ml).
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="text-xs bg-[#2b1d12] hover:bg-[#4a3321] text-white px-3 py-1.5 rounded-lg transition font-medium"
+        >
+          + Add Size
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <div className="grid grid-cols-12 gap-3 text-xs font-semibold uppercase tracking-wider text-stone-600 px-1">
+          <div className="col-span-4">Bottle Volume / Size</div>
+          <div className="col-span-3">Selling Price (₹)</div>
+          <div className="col-span-3">Original MRP (₹)</div>
+          <div className="col-span-2 text-right">Action</div>
+        </div>
+
+        {variants.map((v, idx) => (
+          <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-white p-2.5 rounded-lg border border-stone-200 shadow-sm">
+            <div className="col-span-4">
+              <input
+                type="text"
+                value={v.size}
+                onChange={(e) => handleUpdate(idx, "size", e.target.value)}
+                placeholder="e.g. 5 ml"
+                className="w-full text-sm font-medium border border-stone-300 rounded px-2.5 py-1.5 focus:border-black outline-none"
+                required
+              />
+            </div>
+            <div className="col-span-3">
+              <div className="relative">
+                <span className="absolute left-2.5 top-1.5 text-stone-400 text-sm">₹</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={v.price}
+                  onChange={(e) => handleUpdate(idx, "price", e.target.value)}
+                  placeholder="Price"
+                  className="w-full text-sm font-medium border border-stone-300 rounded pl-6 pr-2 py-1.5 focus:border-black outline-none"
+                  required
+                />
+              </div>
+            </div>
+            <div className="col-span-3">
+              <div className="relative">
+                <span className="absolute left-2.5 top-1.5 text-stone-400 text-sm">₹</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={v.mrp}
+                  onChange={(e) => handleUpdate(idx, "mrp", e.target.value)}
+                  placeholder="MRP"
+                  className="w-full text-sm font-medium border border-stone-300 rounded pl-6 pr-2 py-1.5 focus:border-black outline-none"
+                />
+              </div>
+            </div>
+            <div className="col-span-2 text-right">
+              <button
+                type="button"
+                onClick={() => handleRemove(idx)}
+                className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // New Product Form Component
 const NewProduct = () => {
   const { user, isAuthenticated } = useAuth();
@@ -368,13 +473,20 @@ const NewProduct = () => {
   const queryClient = useQueryClient();
   const [imageFile, setImageFile] = useState(null);
   const [additionalImages, setAdditionalImages] = useState([]);
+  const [sizeVariants, setSizeVariants] = useState([
+    { size: "2 ml", price: "199", mrp: "299" },
+    { size: "4 ml", price: "349", mrp: "449" },
+    { size: "5 ml", price: "399", mrp: "499" },
+    { size: "10 ml", price: "699", mrp: "899" },
+    { size: "50 ml", price: "1299", mrp: "1699" },
+    { size: "100 ml", price: "2199", mrp: "2799" },
+  ]);
   const [formData, setFormData] = useState({
     name: "",
     category: "unisex",
-    price: "",
+    price: "199",
     description: "",
     stock: "15",
-    availableSizes: "2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml",
     topNotes: "Bergamot, Black Currant, Pink Pepper",
     middleNotes: "Jasmine, Rose, Ylang-Ylang",
     baseNotes: "Vanilla, Amber, Patchouli",
@@ -416,12 +528,6 @@ const NewProduct = () => {
       : ["Vanilla", "Amber"],
   });
 
-  const parseSizes = () => {
-    return formData.availableSizes
-      ? formData.availableSizes.split(",").map((s) => s.trim()).filter(Boolean)
-      : ["2 ml", "5 ml", "50 ml", "100 ml"];
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!imageFile) {
@@ -431,7 +537,6 @@ const NewProduct = () => {
     setLoading(true);
     try {
       const parsedNotes = parseNotes();
-      const parsedSizes = parseSizes();
       const rawSlug = (formData.name || "perfume")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
@@ -446,13 +551,31 @@ const NewProduct = () => {
         if (extraUrl) uploadedImages.push(extraUrl);
       }
 
+      // Build structured sizes and prices
+      const formattedVariants = sizeVariants.map((v) => ({
+        size: v.size.trim(),
+        price: Number(v.price) || 199,
+        mrp: Number(v.mrp) || Math.round((Number(v.price) || 199) * 1.3),
+      }));
+
+      const sizePricesDict = {};
+      formattedVariants.forEach((v) => {
+        sizePricesDict[v.size] = { price: v.price, mrp: v.mrp };
+      });
+
+      const parsedSizes = formattedVariants.map((v) => v.size);
+      const basePrice = formattedVariants[0]?.price || Number(formData.price) || 199;
+      const baseMrp = formattedVariants[0]?.mrp || Math.round(basePrice * 1.3);
+
       const newProductData = {
         _id: productSlug,
         id: productSlug,
         name: formData.name,
         slug: productSlug,
-        price: Number(formData.price) || 999,
-        mrp: Math.round((Number(formData.price) || 999) * 1.3),
+        price: basePrice,
+        mrp: baseMrp,
+        sizeVariants: formattedVariants,
+        sizePrices: sizePricesDict,
         description: formData.description || "A luxury signature fragrance.",
         category: formData.category || "unisex",
         stock: Number(formData.stock) || 15,
@@ -498,7 +621,7 @@ const NewProduct = () => {
         console.warn("Firestore sync in background:", firestoreErr.message);
       }
 
-      toast.success("Product created successfully! Scent notes and all sizes are live.");
+      toast.success("Product created successfully with all ml size prices!");
       navigate("/admin/products");
     } catch (err) {
       console.error("Product creation error:", err);
@@ -615,23 +738,8 @@ const NewProduct = () => {
           ></textarea>
         </div>
 
-        {/* Available Volumes / Sizes */}
-        <div className="mb-6 bg-stone-50 border border-stone-200 p-4 rounded-sm">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-stone-800 mb-1">
-            Available Sizes / Volumes (comma-separated)
-          </label>
-          <input
-            type="text"
-            name="availableSizes"
-            value={formData.availableSizes}
-            onChange={handleChange}
-            placeholder="2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml"
-            className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
-          />
-          <p className="text-xs text-stone-500 mt-1">
-            Specify bottle volumes or discovery decants (e.g., <b>2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml</b>). Customers will see interactive buttons on the product page.
-          </p>
-        </div>
+        {/* Bottle & Decant Sizes with Custom Pricing */}
+        <SizeVariantEditor variants={sizeVariants} onChange={setSizeVariants} />
 
         {/* Scent Profile Notes */}
         <div className="mb-6 border border-amber-200 bg-amber-50/40 p-5 rounded-sm">
@@ -773,10 +881,18 @@ const EditProduct = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: allProducts = [] } = useProducts();
+  const [formData, setFormData] = useState(null);
+  const [sizeVariants, setSizeVariants] = useState([
+    { size: "2 ml", price: "199", mrp: "299" },
+    { size: "4 ml", price: "349", mrp: "449" },
+    { size: "5 ml", price: "399", mrp: "499" },
+    { size: "10 ml", price: "699", mrp: "899" },
+    { size: "50 ml", price: "1299", mrp: "1699" },
+    { size: "100 ml", price: "2199", mrp: "2799" },
+  ]);
   const [imageFile, setImageFile] = useState(null);
   const [additionalImages, setAdditionalImages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(null);
 
   useEffect(() => {
     let product = allProducts.find(
@@ -814,9 +930,31 @@ const EditProduct = () => {
         ? product.notes.base.join(", ")
         : "Vanilla, Amber, Patchouli";
 
-      const sizesStr = Array.isArray(product.sizes)
-        ? product.sizes.join(", ")
-        : (product.volume || "2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml");
+      // Parse or load existing size variants with custom prices
+      if (product.sizeVariants && Array.isArray(product.sizeVariants) && product.sizeVariants.length > 0) {
+        setSizeVariants(
+          product.sizeVariants.map((v) => ({
+            size: v.size,
+            price: String(v.price),
+            mrp: String(v.mrp || Math.round(Number(v.price) * 1.3)),
+          }))
+        );
+      } else if (product.sizePrices && typeof product.sizePrices === "object") {
+        const parsed = Object.keys(product.sizePrices).map((sizeKey) => ({
+          size: sizeKey,
+          price: String(product.sizePrices[sizeKey].price || product.price),
+          mrp: String(product.sizePrices[sizeKey].mrp || Math.round((product.sizePrices[sizeKey].price || product.price) * 1.3)),
+        }));
+        if (parsed.length > 0) setSizeVariants(parsed);
+      } else if (product.sizes && Array.isArray(product.sizes)) {
+        setSizeVariants(
+          product.sizes.map((s, idx) => ({
+            size: s,
+            price: String(idx === 0 ? product.price : Math.round(product.price * (1 + idx * 0.4))),
+            mrp: String(idx === 0 ? (product.mrp || Math.round(product.price * 1.3)) : Math.round(product.price * (1 + idx * 0.4) * 1.3)),
+          }))
+        );
+      }
 
       setFormData({
         name: product.name || "",
@@ -824,7 +962,6 @@ const EditProduct = () => {
         price: product.price || "",
         description: product.description || "",
         stock: product.stock || 0,
-        availableSizes: sizesStr,
         topNotes: topN,
         middleNotes: midN,
         baseNotes: baseN,
@@ -867,18 +1004,11 @@ const EditProduct = () => {
       : ["Vanilla", "Amber"],
   });
 
-  const parseSizes = () => {
-    return formData.availableSizes
-      ? formData.availableSizes.split(",").map((s) => s.trim()).filter(Boolean)
-      : ["2 ml", "5 ml", "50 ml", "100 ml"];
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const parsedNotes = parseNotes();
-      const parsedSizes = parseSizes();
 
       const product = allProducts.find((p) => String(p._id) === String(id) || String(p.id) === String(id) || p.slug === id);
       const productSlug =
@@ -888,10 +1018,27 @@ const EditProduct = () => {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)/g, "");
 
+      const formattedVariants = sizeVariants.map((v) => ({
+        size: v.size.trim(),
+        price: Number(v.price) || 199,
+        mrp: Number(v.mrp) || Math.round((Number(v.price) || 199) * 1.3),
+      }));
+
+      const sizePricesDict = {};
+      formattedVariants.forEach((v) => {
+        sizePricesDict[v.size] = { price: v.price, mrp: v.mrp };
+      });
+
+      const parsedSizes = formattedVariants.map((v) => v.size);
+      const basePrice = formattedVariants[0]?.price || Number(formData.price) || 199;
+      const baseMrp = formattedVariants[0]?.mrp || Math.round(basePrice * 1.3);
+
       let updatePayload = {
         name: formData.name,
-        price: Number(formData.price),
-        mrp: Math.round(Number(formData.price) * 1.3),
+        price: basePrice,
+        mrp: baseMrp,
+        sizeVariants: formattedVariants,
+        sizePrices: sizePricesDict,
         description: formData.description,
         category: formData.category,
         stock: Number(formData.stock),
@@ -954,7 +1101,7 @@ const EditProduct = () => {
         console.warn("Firestore updateDoc fallback:", firestoreErr.message);
       }
 
-      toast.success("Product updated successfully!");
+      toast.success("Product updated successfully with all size prices!");
       navigate("/admin/products");
     } catch (error) {
       console.error(error);
@@ -1010,7 +1157,7 @@ const EditProduct = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Price</label>
+            <label className="block text-sm font-medium mb-2">Base Starting Price</label>
             <input
               type="number"
               name="price"
@@ -1044,23 +1191,8 @@ const EditProduct = () => {
             required
           ></textarea>
         </div>
-        {/* Available Volumes / Sizes */}
-        <div className="mb-6 bg-stone-50 border border-stone-200 p-4 rounded-sm">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-stone-800 mb-1">
-            Available Sizes / Volumes (comma-separated)
-          </label>
-          <input
-            type="text"
-            name="availableSizes"
-            value={formData.availableSizes}
-            onChange={handleChange}
-            placeholder="2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml"
-            className="w-full border border-stone-300 p-2.5 text-sm bg-white focus:border-black outline-none"
-          />
-          <p className="text-xs text-stone-500 mt-1">
-            Specify bottle volumes or discovery decants (e.g., <b>2 ml, 4 ml, 5 ml, 10 ml, 50 ml, 100 ml</b>). Customers will see interactive buttons on the product page.
-          </p>
-        </div>
+        {/* Bottle & Decant Sizes with Custom Pricing */}
+        <SizeVariantEditor variants={sizeVariants} onChange={setSizeVariants} />
 
         {/* Scent Profile Notes */}
         <div className="mb-6 border border-amber-200 bg-amber-50/40 p-5 rounded-sm">
