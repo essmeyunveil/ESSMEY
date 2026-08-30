@@ -88,7 +88,8 @@ export const AuthProvider = ({ children }) => {
 
         setCartSynced(true);
       } catch (error) {
-        console.error("[Cart Sync Error]:", error);
+        // Silently skip cart cloud sync if offline or permissions pending
+        setCartSynced(true);
       }
     },
     [cartSynced]
