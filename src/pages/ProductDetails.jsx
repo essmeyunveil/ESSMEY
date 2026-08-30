@@ -91,11 +91,11 @@ const ProductDetails = () => {
         setLoading(false);
       }
 
-      // 2. Background Firestore Sync (with 2-second timeout)
+      // 2. Background Firestore Sync (with 2.5-second timeout)
       if (!db.__isMock) {
         try {
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Timeout")), 2000)
+            setTimeout(() => reject(new Error("Timeout")), 2500)
           );
           const fetchPromise = getDoc(doc(db, "products", id));
           const docSnap = await Promise.race([fetchPromise, timeoutPromise]);
@@ -105,8 +105,8 @@ const ProductDetails = () => {
             const remoteProduct = {
               _id: docSnap.id,
               ...data,
-              image: data.thumbnail || (data.images && data.images[0]) || FALLBACK_IMAGE,
-              images: data.images?.length ? data.images : [data.thumbnail || FALLBACK_IMAGE],
+              image: data.thumbnail || (data.images && data.images[0]) || data.image || FALLBACK_IMAGE,
+              images: data.images?.length ? data.images : [data.image || data.thumbnail || FALLBACK_IMAGE],
             };
             setProduct(remoteProduct);
             setLoading(false);
@@ -131,28 +131,27 @@ const ProductDetails = () => {
   }, [id]);
 
   const availableSizes =
-    product.sizes && product.sizes.length > 0
+    product?.sizes && product.sizes.length > 0
       ? product.sizes
-      : ["2 ml", "5 ml", "50 ml", "100 ml"];
-  const [selectedSize, setSelectedSize] = useState(availableSizes[0] || "50 ml");
+      : ["2 ml", "4 ml", "5 ml", "10 ml", "50 ml", "100 ml"];
+  const [selectedSize, setSelectedSize] = useState("50 ml");
 
   useEffect(() => {
-    if (product.sizes?.length) {
+    if (product?.sizes && product.sizes.length > 0) {
       setSelectedSize(product.sizes[0]);
     }
   }, [product]);
 
   const handleWishlistClick = (e) => {
+    if (!product?._id) return;
     try {
       e.preventDefault();
       e.stopPropagation();
 
       if (isInWishlist(product._id)) {
         removeFromWishlist(product._id);
-        // console.log("Removed from wishlist");
       } else {
         addToWishlist(product);
-        // console.log("Added to wishlist");
       }
     } catch (err) {
       console.error("Error handling wishlist:", err);
@@ -160,6 +159,7 @@ const ProductDetails = () => {
   };
 
   const handleAddToCart = (shouldNavigate = false) => {
+    if (!product) return;
     if (product.stock === 0) {
       console.error("Product is out of stock");
       return;
