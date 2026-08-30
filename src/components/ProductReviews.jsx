@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { StarIcon as StarIconOutline } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import { useAuth } from "../utils/AuthContext";
@@ -37,21 +37,29 @@ const ProductReviews = ({ productId }) => {
         setLoadingReviews(true);
         const q = query(
           collection(db, "reviews"),
-          where("productId", "==", productId),
-          orderBy("createdAt", "desc")
+          where("productId", "==", productId)
         );
         const snapshot = await getDocs(q);
-        const fetched = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          date: doc.data().createdAt?.toDate?.().toISOString() ?? new Date().toISOString(),
-        }));
+        const fetched = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const parsedDate = data.createdAt?.toDate?.()
+            ? data.createdAt.toDate().toISOString()
+            : typeof data.createdAt === "string"
+              ? data.createdAt
+              : new Date().toISOString();
+          return {
+            id: doc.id,
+            ...data,
+            date: parsedDate,
+          };
+        });
+        fetched.sort((a, b) => new Date(b.date) - new Date(a.date));
         setReviews(fetched);
         if (user) {
           setHasReviewed(fetched.some((r) => r.userId === user.uid));
         }
       } catch (err) {
-        console.error("Failed to load reviews:", err);
+        console.warn("Reviews load fallback:", err.message);
       } finally {
         setLoadingReviews(false);
       }
